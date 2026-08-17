@@ -83,3 +83,49 @@ ANTHROPIC_MODEL=ornith-1.0      # override CLAUDE_MODEL
 OLLAMA_BASE_URL=http://host.docker.internal:11434   # fallback URL
 OLLAMA_MODEL=deepseek-coder-v2:16b                   # fallback model
 ```
+
+## Optional Scan Modules
+
+```bash
+# Enable optional scans in .env:
+DOCKER_CHECKS=true              # Docker runtime security checks (default: true)
+LYNIS_SCAN=true                 # Lynis Linux hardening audit (default: false)
+TLS_SCAN=true                   # testssl.sh TLS certificate audit (default: false)
+NMAP_SELF_SCAN=true             # nmap port scan (default: true)
+```
+
+**Docker Runtime Checks** (always on):
+- Docker socket permissions
+- daemon.json security config (TLS, userns-remap, live-restore)
+- TCP port exposure (2375, 2376)
+- Docker group membership
+
+**Lynis Audit** (optional, LYNIS_SCAN=true):
+- Full Linux security hardening audit
+- Takes ~2-3 minutes
+- Output: lynis.txt (text-based report)
+
+**testssl.sh TLS Audit** (optional, TLS_SCAN=true):
+- Scans SSL/TLS ports identified by nmap
+- Certificate validity, TLS version support, cipher suites
+- Output: testssl.txt (structured text report)
+
+## Public Exposure Context
+
+The scanner collects:
+- `ss_listeners.txt` — which services bind to 0.0.0.0 (internet) vs 127.0.0.1 (local)
+- `ufw_status.txt` — UFW firewall rules
+- `iptables.txt` — iptables rules
+- `nftables.txt` — nftables rules
+
+Claude uses this to classify risk: a Critical CVE on a local-only service is Medium risk in practice.
+
+## Slack Threat Brief Format
+
+The remediation output is now a **Threat Brief** with:
+- **Executive Summary** — plain-English overview + top 3 actions this week
+- **Critical/High/Medium Findings** — with exact fixes
+- **Likely False Positives** — distro backports, unverified behavioral probes
+- **Re-Scan Scope** — what to verify after fixes
+
+Raw report files are attached to the Slack message for deep-dive.

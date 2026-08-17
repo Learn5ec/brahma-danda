@@ -12,7 +12,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         jq \
         cron \
+        iproute2 \
+        iptables \
+        nftables \
+        ufw \
+        lynis \
+        git \
+        bsdmainutils \
+        dnsutils \
     && rm -rf /var/lib/apt/lists/*
+
+# ── Install testssl.sh ──
+RUN git clone --depth 1 https://github.com/drwetter/testssl.sh.git /usr/local/testssl \
+    && ln -s /usr/local/testssl/testssl.sh /usr/local/bin/testssl.sh
 
 # ── Trivy (direct download from GitHub releases) ──
 ARG TRIVY_VERSION=0.73.0

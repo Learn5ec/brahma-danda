@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Reads the raw scan output for one run, asks Claude to turn it into a
-prioritized remediation plan, then posts the plan + raw reports to Slack.
+Threat Brief, then posts the plan + raw reports to Slack.
 
 Secrets are read from /run/secrets/*, never from environment variables.
 """
 import argparse
 import datetime
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -17,52 +18,47 @@ from anthropic import Anthropic
 
 MAX_RAW_CHARS_PER_FILE = 60_000  # keep the prompt bounded on noisy hosts
 
-SYSTEM_PROMPT = """You are a security engineer producing a remediation plan from raw \
+SYSTEM_PROMPT = """You are a security engineer producing a Threat Brief from raw \
 vulnerability-scan output for a single Linux server. You will receive:
-- Trivy JSON (OS package CVEs, matched against the real installed versions — treat as \
-authoritative for CVE presence/absence)
-- debsecan output (Debian-tracker cross-check; on Ubuntu hosts this is best-effort only, \
-Trivy is the primary source of truth if they disagree)
-- SSH and nginx config-hardening check results (JSON, pass/fail per rule)
-- nmap self-scan output (open ports + NSE script results, including CVE-detection scripts)
+- Trivy JSON (OS package CVEs, matched against real installed versions — treat as \
+authoritative for CVE presence/absence. Disregard nmap CVEs if Trivy shows patched)
+- debsecan output (Debian-tracker cross-check; best-effort)
+- Config check results (SSH, nginx, docker; pass/fail per rule)
+- nmap self-scan output (open ports + behavioural script results)
+- ss -tlnp and firewall status (shows which services are internet-reachable)
 
-CRITICAL — for the nmap section specifically, actively distinguish real findings from likely \
-false positives:
-- NSE CVE-detection scripts (vulners, vulscan, etc.) match on the raw banner version string. \
-Distro-packaged software (especially Debian/Ubuntu OpenSSH, with a distro suffix like \
-'Ubuntu-3ubuntuNN.NN') is very often patched via backport while the banner stays the same — \
-flag these explicitly as "likely false positive — verify via package manager" rather than \
-listing them as confirmed. Cross-check against what Trivy/debsecan say about the same package \
-where possible, since those ARE package-manager-accurate.
-- Slowloris and similar DoS-heuristic script results ("LIKELY VULNERABLE") are weak heuristics — \
-label them as needing manual verification (e.g. slowhttptest), not as confirmed vulnerabilities.
-- Unidentified/unconfirmed services (nmap's own '?' suffix) are open questions needing manual \
-verification, not findings.
+CRITICAL: Use `ss_listeners` and firewall data to classify EVERY finding's exposure:
+- Internet-reachable: Bound to 0.0.0.0, [::], or public IP, and not blocked by firewall.
+- Local-only: Bound to 127.0.0.1 or ::1. (Lowers risk significantly).
 
-Produce a markdown remediation plan with this exact structure:
+CRITICAL: Docker misconfigurations (unencrypted TCP socket, world-readable local socket) \
+are CRITICAL risk if they allow privilege escalation or unauthenticated access.
 
-## Security Scan Summary — {host}
-One paragraph: overall risk posture, headline numbers (X critical, Y high, etc), and how many \
-nmap findings are high-confidence vs. likely false positive.
+Produce a Slack-native Threat Brief with this EXACT structure (use emojis, no ## headers):
 
-## Priority 1 — Fix Immediately (Critical)
-## Priority 2 — Fix This Sprint (High)
-## Priority 3 — Verify First (flagged as possible false positive — confirm before acting)
-## Priority 4 — Fix When Convenient (Medium/Low)
+:rotating_light: *Threat Brief — {host}*
+1–3 sentences: internet-reachable services count, highest-risk finding, \
+what an attacker could do with it (concrete action, e.g., "allows unauthenticated read of DB").
 
-Under each priority, list each finding as:
-- **[finding name]** — one-line description of the risk
-  - Fix: exact command or config change (or exact verification step, for Priority 3 items)
+:red_circle: *Critical* / :orange_circle: *High — Fix Now*
+• *[Finding Name]* — concrete impact in one line
+  `exact fix command or config change`
+
+:yellow_circle: *Medium — Fix This Sprint*
+• *[Finding Name]* — concrete impact
+  `exact fix command`
+
+:white_check_mark: *Context & Passed Checks*
+X of Y SSH checks passed. N services on 0.0.0.0 (internet-reachable). N local-only.
+
+:mag: *Suggested Re-Scan Scope*
+Exactly what to verify after fixes are applied.
 
 Rules:
-- Only include a finding once, in its highest applicable severity bucket.
-- If a Trivy CVE affects a package where the installed version string suggests a distro \
-backport, say so explicitly and mark it lower confidence rather than omitting it.
-- If debsecan and Trivy disagree, note the disagreement and say which one to trust and why.
-- Passing checks: do not list them individually, just note the count that passed.
-- Be concrete. Never say "add security headers" — give the exact header/value/line.
-- End with a "## Suggested Re-Scan Scope" section listing exactly what to verify after fixes \
-are applied.
+- Be concrete. Never say "add security headers" — give the exact header/value.
+- Do not list individual passing checks.
+- If debsecan and Trivy disagree, trust Trivy and explain why.
+- Do NOT use Markdown headers (##, ###). Use Slack mrkdwn: *bold*, _italic_.
 """
 
 
@@ -124,11 +120,38 @@ def summarize_nmap_xml(xml_path: Path) -> str:
     return "\n".join(lines) if lines else "(nmap ran but found no open ports)"
 
 
+def md_to_mrkdwn(text: str) -> str:
+    import re
+    # H2 → bold section header with surrounding newlines
+    text = re.sub(r'^## (.+)$', r'\n*\1*\n', text, flags=re.MULTILINE)
+    # H3 → italic
+    text = re.sub(r'^### (.+)$', r'\n_\1_\n', text, flags=re.MULTILINE)
+    # **bold** → *bold*  (Slack bold)
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text)
+    # Bullet points with bold items
+    text = re.sub(r'^- \*(.+?)\*', r'• *\1*', text, flags=re.MULTILINE)
+    # Plain bullets
+    text = re.sub(r'^- ', r'• ', text, flags=re.MULTILINE)
+    return text
+
+
 def build_user_prompt(report_dir: Path, host: str) -> str:
     trivy = read_truncated(report_dir / "trivy.json")
     debsecan = read_truncated(report_dir / "debsecan.txt")
     ssh_checks = read_truncated(report_dir / "ssh_checks.json")
     nginx_checks = read_truncated(report_dir / "nginx_checks.json")
+    docker_checks = read_truncated(report_dir / "docker_checks.json")
+
+    ss_listeners = read_truncated(report_dir / "ss_listeners.txt")
+    ufw_status = read_truncated(report_dir / "ufw_status.txt")
+    iptables = read_truncated(report_dir / "iptables.txt")
+    nftables = read_truncated(report_dir / "nftables.txt")
+    lynis_log = read_truncated(report_dir / "lynis.log")
+
+    testssl_reports = ""
+    for f in sorted(report_dir.glob("testssl_*.json")):
+        testssl_reports += f"\n--- {f.name} ---\n{read_truncated(f)}\n"
+
     nmap_summary = summarize_nmap_xml(report_dir / "nmap.xml")
     if len(nmap_summary) > MAX_RAW_CHARS_PER_FILE:
         nmap_summary = nmap_summary[:MAX_RAW_CHARS_PER_FILE] + "\n...[truncated]"
@@ -141,14 +164,32 @@ def build_user_prompt(report_dir: Path, host: str) -> str:
 === DEBSECAN (best-effort cross-check) ===
 {debsecan}
 
-=== SSH CONFIG CHECKS (JSON) ===
-{ssh_checks}
+=== CONFIG CHECKS (JSON) ===
+SSH: {ssh_checks}
+NGINX: {nginx_checks}
+DOCKER: {docker_checks}
 
-=== NGINX CONFIG CHECKS (JSON) ===
-{nginx_checks}
+=== HOST HARDENING (Lynis) ===
+{lynis_log}
 
-=== NMAP SELF-SCAN (open ports + NSE script output) ===
+=== PUBLIC EXPOSURE / FIREWALL ===
+SS Listeners:
+{ss_listeners}
+
+UFW Status:
+{ufw_status}
+
+IPtables:
+{iptables}
+
+NFTables:
+{nftables}
+
+=== NMAP SELF-SCAN (open ports + behavioural probes) ===
 {nmap_summary}
+
+=== TLS/SSL CHECKS (testssl.sh) ===
+{testssl_reports}
 """
 
 
@@ -197,7 +238,31 @@ def call_ollama(model: str, base_url: str, system_prompt: str, user_prompt: str)
     return data.get("message", {}).get("content", "")
 
 
-def upload_file_to_slack(channel: str, file_path: Path, title: str) -> bool:
+def split_file(file_path: Path, max_size: int) -> list[Path]:
+    """Split a file into chunks of max_size bytes. Returns list of chunk paths."""
+    if file_path.stat().st_size <= max_size:
+        return [file_path]
+
+    chunks = []
+    chunk_num = 1
+    with open(file_path, "rb") as f:
+        while True:
+            chunk_data = f.read(max_size)
+            if not chunk_data:
+                break
+            chunk_path = file_path.parent / f"{file_path.stem}-{chunk_num}.part"
+            with open(chunk_path, "wb") as chunk_f:
+                chunk_f.write(chunk_data)
+            chunks.append(chunk_path)
+            chunk_num += 1
+
+    # Clean up original file
+    file_path.unlink()
+    print(f"[remediate] Split {file_path.name} into {len(chunks)} chunks of {max_size} bytes")
+    return chunks
+
+
+def upload_file_to_slack(channel: str, file_path: Path, title: str, host: str = "") -> bool:
     """Upload a file to Slack using the 3-step External Upload API."""
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
@@ -248,7 +313,7 @@ def upload_file_to_slack(channel: str, file_path: Path, title: str) -> bool:
                 }
             ],
             "channel_id": channel,
-            "initial_comment": f"{title}",
+            "initial_comment": f"{host} — {title}" if host else title,
         },
         timeout=30,
     )
@@ -273,13 +338,12 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Slack markdown is "mrkdwn", not full GFM — convert the essentials.
-    slack_text = markdown.replace("## ", "*").replace("**", "*")
+    # Convert GFM Markdown to Slack mrkdwn
+    slack_text = md_to_mrkdwn(markdown)
     # Slack messages have a ~40k char hard cap; keep headroom.
     if len(slack_text) > 38000:
         slack_text = slack_text[:38000] + "\n...[truncated — see attached full report]"
 
-    # Split into multiple blocks if needed (Slack limit: 3001 chars per text)
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn",
             "text": f":shield: *Monthly security scan complete for `{host}`*"}},
@@ -311,16 +375,25 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
     thread_ts = msg_resp.json().get("ts")
 
     # Attach raw reports using 3-step External Upload API
+    # Split files larger than 50MB into chunks
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50MB
     for raw_file in [
         "trivy.json", "debsecan.txt", "ssh_checks.json", "nginx_checks.json",
-        "nmap.xml", "nmap.txt",
+        "docker_checks.json", "nmap.xml", "nmap.txt", "ss_listeners.txt",
+        "ufw_status.txt", "iptables.txt", "lynis.log"
     ]:
         fpath = report_dir / raw_file
         if not fpath.exists():
             continue
-        success = upload_file_to_slack(channel, fpath, f"{host} — {raw_file}")
-        if not success:
-            print(f"[remediate] ⚠️ Failed to upload {raw_file} to Slack", file=sys.stderr)
+        # Split large files into chunks
+        chunks = split_file(fpath, MAX_CHUNK_SIZE)
+        for i, chunk in enumerate(chunks, 1):
+            title = f"{raw_file}" if len(chunks) == 1 else f"{raw_file}.{i:03d}"
+            success = upload_file_to_slack(channel, chunk, title, host)
+            if not success:
+                print(f"[remediate] ⚠️ Failed to upload {title} to Slack", file=sys.stderr)
+            # Clean up chunk after upload
+            chunk.unlink(missing_ok=True)
 
 
 def copy_reports_to_local(report_dir: Path, host: str) -> Path:
@@ -361,16 +434,25 @@ def post_raw_reports_to_slack(channel: str, report_dir: Path, host: str) -> None
     msg_resp.raise_for_status()
 
     # Attach all raw reports using 3-step External Upload API
+    # Split files larger than 50MB into chunks
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50MB
     for raw_file in [
         "trivy.json", "debsecan.txt", "ssh_checks.json", "nginx_checks.json",
-        "nmap.xml", "nmap.txt",
+        "docker_checks.json", "nmap.xml", "nmap.txt", "ss_listeners.txt",
+        "ufw_status.txt", "iptables.txt", "lynis.log"
     ]:
         fpath = report_dir / raw_file
         if not fpath.exists():
             continue
-        success = upload_file_to_slack(channel, fpath, f"{host} — {raw_file}")
-        if not success:
-            print(f"[remediate] ⚠️ Failed to upload {raw_file} to Slack", file=sys.stderr)
+        # Split large files into chunks
+        chunks = split_file(fpath, MAX_CHUNK_SIZE)
+        for i, chunk in enumerate(chunks, 1):
+            title = f"{raw_file}" if len(chunks) == 1 else f"{raw_file}.{i:03d}"
+            success = upload_file_to_slack(channel, chunk, title, host)
+            if not success:
+                print(f"[remediate] ⚠️ Failed to upload {title} to Slack", file=sys.stderr)
+            # Clean up chunk after upload
+            chunk.unlink(missing_ok=True)
 
 
 def main():

@@ -6,13 +6,16 @@ set -uo pipefail
 
 HOST_ROOT="${1:?usage: ssh_checks.sh <host_mount_root>}"
 CFG="${HOST_ROOT}/etc/ssh/sshd_config"
+CFG_D="${HOST_ROOT}/etc/ssh/sshd_config.d"
 
 get_effective_value() {
-  # sshd_config: last matching directive wins, case-insensitive keyword,
+  # sshd_config: FIRST matching directive wins, case-insensitive keyword,
   # ignore comments/blank lines. Falls back to "(not set / default)".
+  # Ubuntu 22.04+ puts includes at the top of sshd_config, so we cat
+  # the included files first, then the main config.
   local key="$1"
   if [ -f "${CFG}" ]; then
-    grep -iE "^\s*${key}\s+" "${CFG}" 2>/dev/null | tail -n1 | awk '{print $2}'
+    (cat "${CFG_D}"/*.conf 2>/dev/null; cat "${CFG}") | grep -iE "^\s*${key}\s+" | head -n1 | awk '{print $2}'
   fi
 }
 

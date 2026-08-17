@@ -24,6 +24,7 @@ services:
     volumes:
       - /:/host:ro
       - scan_reports:/app/reports
+      - ./reports/latest:/app/reports/latest:rw       # host-side test dir (iterative prompt work)
       - trivy_cache:/home/brahmadanda/.cache/trivy   # persistent vuln DB cache
 
     # ⚠️ TRADE-OFF, not a default we make silently: nmap needs to see the
