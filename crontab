@@ -1,0 +1,1 @@
+__SCHEDULE__ /app/scripts/run_scan.sh >> /app/reports/last_run.log 2>&1

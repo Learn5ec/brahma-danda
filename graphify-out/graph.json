@@ -1,0 +1,1461 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "nginx_checks.sh",
+      "file_type": "code",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_nginx_checks",
+      "community": 5,
+      "norm_label": "nginx_checks.sh"
+    },
+    {
+      "label": "nginx_checks.sh script",
+      "file_type": "code",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_nginx_checks_sh__entry",
+      "community": 5,
+      "norm_label": "nginx_checks.sh script"
+    },
+    {
+      "label": "add_finding()",
+      "file_type": "code",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L11",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_nginx_checks_add_finding",
+      "community": 5,
+      "norm_label": "add_finding()"
+    },
+    {
+      "label": "check_present()",
+      "file_type": "code",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L27",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_nginx_checks_check_present",
+      "community": 5,
+      "norm_label": "check_present()"
+    },
+    {
+      "label": "check_absent()",
+      "file_type": "code",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L36",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_nginx_checks_check_absent",
+      "community": 5,
+      "norm_label": "check_absent()"
+    },
+    {
+      "label": "ssh_checks.sh",
+      "file_type": "code",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_ssh_checks",
+      "community": 6,
+      "norm_label": "ssh_checks.sh"
+    },
+    {
+      "label": "ssh_checks.sh script",
+      "file_type": "code",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_ssh_checks_sh__entry",
+      "community": 6,
+      "norm_label": "ssh_checks.sh script"
+    },
+    {
+      "label": "get_effective_value()",
+      "file_type": "code",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L10",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_ssh_checks_get_effective_value",
+      "community": 6,
+      "norm_label": "get_effective_value()"
+    },
+    {
+      "label": "add_finding()",
+      "file_type": "code",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L20",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_function"
+      },
+      "_origin": "ast",
+      "id": "scripts_checks_ssh_checks_add_finding",
+      "community": 6,
+      "norm_label": "add_finding()"
+    },
+    {
+      "label": "entrypoint.sh",
+      "file_type": "code",
+      "source_file": "scripts/entrypoint.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "scripts_entrypoint",
+      "community": 8,
+      "norm_label": "entrypoint.sh"
+    },
+    {
+      "label": "entrypoint.sh script",
+      "file_type": "code",
+      "source_file": "scripts/entrypoint.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "scripts_entrypoint_sh__entry",
+      "community": 8,
+      "norm_label": "entrypoint.sh script"
+    },
+    {
+      "label": "remediate.py",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_remediate",
+      "community": 1,
+      "norm_label": "remediate.py"
+    },
+    {
+      "label": "read_secret()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "scripts_remediate_read_secret",
+      "community": 1,
+      "norm_label": "read_secret()"
+    },
+    {
+      "label": "read_truncated()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "scripts_remediate_read_truncated",
+      "community": 1,
+      "norm_label": "read_truncated()"
+    },
+    {
+      "label": "Path",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "path",
+      "community": 1,
+      "norm_label": "path"
+    },
+    {
+      "label": "summarize_nmap_xml()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L85",
+      "_origin": "ast",
+      "id": "scripts_remediate_summarize_nmap_xml",
+      "community": 1,
+      "norm_label": "summarize_nmap_xml()"
+    },
+    {
+      "label": "build_user_prompt()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "scripts_remediate_build_user_prompt",
+      "community": 1,
+      "norm_label": "build_user_prompt()"
+    },
+    {
+      "label": "call_claude()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L154",
+      "_origin": "ast",
+      "id": "scripts_remediate_call_claude",
+      "community": 1,
+      "norm_label": "call_claude()"
+    },
+    {
+      "label": "post_to_slack()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L166",
+      "_origin": "ast",
+      "id": "scripts_remediate_post_to_slack",
+      "community": 1,
+      "norm_label": "post_to_slack()"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L223",
+      "_origin": "ast",
+      "id": "scripts_remediate_main",
+      "community": 1,
+      "norm_label": "main()"
+    },
+    {
+      "label": "Compact text summary of nmap's XML \u2014 bounded size, keeps the CVE     script outp",
+      "file_type": "rationale",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L86",
+      "_origin": "ast",
+      "id": "scripts_remediate_rationale_86",
+      "community": 1,
+      "norm_label": "compact text summary of nmap's xml \u2014 bounded size, keeps the cve     script outp"
+    },
+    {
+      "label": "run_scan.sh",
+      "file_type": "code",
+      "source_file": "scripts/run_scan.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "scripts_run_scan",
+      "community": 9,
+      "norm_label": "run_scan.sh"
+    },
+    {
+      "label": "run_scan.sh script",
+      "file_type": "code",
+      "source_file": "scripts/run_scan.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "bash_entrypoint"
+      },
+      "_origin": "ast",
+      "id": "scripts_run_scan_sh__entry",
+      "community": 9,
+      "norm_label": "run_scan.sh script"
+    },
+    {
+      "label": "secscan-agent",
+      "type": "service",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Containerized security scanning agent that scans the host it is deployed on, runs monthly, and posts Claude-generated remediation plans to Slack.",
+      "file_type": "concept",
+      "id": "secscan-agent-service",
+      "community": 3,
+      "norm_label": "secscan-agent"
+    },
+    {
+      "label": "Trivy",
+      "type": "tool",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Rootfs vulnerability scanner that checks OS package CVEs against the real installed versions. Primary source of truth for vulnerability detection.",
+      "file_type": "concept",
+      "id": "trivy-tool",
+      "community": 0,
+      "norm_label": "trivy"
+    },
+    {
+      "label": "debsecan",
+      "type": "tool",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Debian security-tracker cross-check tool. Best-effort secondary check; not authoritative on Ubuntu hosts.",
+      "file_type": "concept",
+      "id": "debsecan-tool",
+      "community": 0,
+      "norm_label": "debsecan"
+    },
+    {
+      "label": "SSH configuration hardening check",
+      "type": "function",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Checks SSH hardening settings: PermitRootLogin, PasswordAuthentication, LoginGraceTime, MaxAuthTries, X11Forwarding.",
+      "file_type": "concept",
+      "id": "ssh-config-check",
+      "community": 0,
+      "norm_label": "ssh configuration hardening check"
+    },
+    {
+      "label": "Nginx configuration hardening check",
+      "type": "function",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Checks web-layer security settings: HSTS, CSP, X-Frame-Options, server_tokens, TLS version, rate limiting.",
+      "file_type": "concept",
+      "id": "nginx-config-check",
+      "community": 0,
+      "norm_label": "nginx configuration hardening check"
+    },
+    {
+      "label": "nmap",
+      "type": "tool",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Network scanner with NSE scripts that discovers real open ports on the host and runs CVE-detection scripts. Uses categories default,discovery,safe,vuln,auth by default.",
+      "file_type": "concept",
+      "id": "nmap-tool",
+      "community": 4,
+      "norm_label": "nmap"
+    },
+    {
+      "label": "Claude (Sonnet)",
+      "type": "service",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Large language model that reads all scan output and writes a prioritized remediation plan with exact commands.",
+      "file_type": "concept",
+      "id": "claude-sonnet-llm",
+      "community": 0,
+      "norm_label": "claude (sonnet)"
+    },
+    {
+      "label": "Slack",
+      "type": "service",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Notification delivery channel. Receives Claude-generated remediation plans and raw scan data. Requires chat:write and files:write scopes.",
+      "file_type": "concept",
+      "id": "slack-delivery",
+      "community": 0,
+      "norm_label": "slack"
+    },
+    {
+      "label": "docker-compose.yml",
+      "type": "file",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Docker Compose configuration defining the secscan service, secrets, volumes, capabilities, and resource limits.",
+      "file_type": "concept",
+      "id": "docker-compose-config",
+      "community": 2,
+      "norm_label": "docker-compose.yml"
+    },
+    {
+      "label": "requirements.txt",
+      "type": "file",
+      "source_file": "requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python dependency file pinning anthropic SDK (0.40.0) and requests (2.32.3).",
+      "file_type": "concept",
+      "id": "requirements-txt",
+      "community": 7,
+      "norm_label": "requirements.txt"
+    },
+    {
+      "label": "Claude API key",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "API key for Anthropic Claude, stored in secrets/claude_api_key.txt with 0400 permissions and mounted as a file at /run/secrets/, never as an env var.",
+      "file_type": "concept",
+      "id": "claude-api-key-secret",
+      "community": 2,
+      "norm_label": "claude api key"
+    },
+    {
+      "label": "Slack bot token",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Slack bot token (xoxb-...) requiring chat:write and files:write OAuth scopes, stored in secrets/slack_bot_token.txt with 0400 permissions.",
+      "file_type": "concept",
+      "id": "slack-bot-token-secret",
+      "community": 2,
+      "norm_label": "slack bot token"
+    },
+    {
+      "label": "Host filesystem (read-only)",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Host root filesystem mounted at /:/host:ro so the agent scans the real machine. Read-only ensures the agent cannot modify anything on the host.",
+      "file_type": "concept",
+      "id": "host-filesystem-mount",
+      "community": 3,
+      "norm_label": "host filesystem (read-only)"
+    },
+    {
+      "label": "scan_reports named volume",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Docker named volume at /app/reports where raw scan reports are written in timestamped folders.",
+      "file_type": "concept",
+      "id": "scan-reports-volume",
+      "community": 3,
+      "norm_label": "scan_reports named volume"
+    },
+    {
+      "label": "network_mode: host",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Container network configuration allowing observation of host network traffic/sockets for real port visibility. Trade-off for blast radius.",
+      "file_type": "concept",
+      "id": "network-mode-host",
+      "community": 3,
+      "norm_label": "network_mode: host"
+    },
+    {
+      "label": "NET_RAW capability",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Linux capability added to the container, required by nmap for SYN scans.",
+      "file_type": "concept",
+      "id": "net-raw-capability",
+      "community": 4,
+      "norm_label": "net_raw capability"
+    },
+    {
+      "label": "NET_ADMIN capability",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Linux capability added to the container, required by nmap.",
+      "file_type": "concept",
+      "id": "net-admin-capability",
+      "community": 4,
+      "norm_label": "net_admin capability"
+    },
+    {
+      "label": "no-new-privileges:true",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Security option preventing privilege escalation within the container.",
+      "file_type": "concept",
+      "id": "no-new-privileges",
+      "community": 2,
+      "norm_label": "no-new-privileges:true"
+    },
+    {
+      "label": "SCAN_SCHEDULE_CRON",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable controlling the scan schedule. Default: 0 3 1 * * (03:00 on the 1st of each month).",
+      "file_type": "concept",
+      "id": "scan-schedule-cron",
+      "community": 2,
+      "norm_label": "scan_schedule_cron"
+    },
+    {
+      "label": "NMAP_SCRIPT_CATEGORIES",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable controlling which nmap NSE script categories are used. Default: default,discovery,safe,vuln,auth (detection only, no active attacks).",
+      "file_type": "concept",
+      "id": "nmap-script-categories",
+      "community": 4,
+      "norm_label": "nmap_script_categories"
+    },
+    {
+      "label": "CLAUDE_MODEL",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable selecting the Claude model. Default: claude-sonnet-5.",
+      "file_type": "concept",
+      "id": "claude-model-config",
+      "community": 2,
+      "norm_label": "claude_model"
+    },
+    {
+      "label": "NMAP_SELF_SCAN",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable to disable nmap entirely. Default: true.",
+      "file_type": "concept",
+      "id": "nmap-self-scan-toggle",
+      "community": 4,
+      "norm_label": "nmap_self_scan"
+    },
+    {
+      "label": "NMAP_ALLOW_INTRUSIVE",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable to add exploit,dos,brute,fuzzer script categories. Default: false. Requires maintenance window as it can crash services or lock out accounts.",
+      "file_type": "concept",
+      "id": "nmap-intrusive-toggle",
+      "community": 4,
+      "norm_label": "nmap_allow_intrusive"
+    },
+    {
+      "label": "anthropic SDK",
+      "type": "module",
+      "source_file": "requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python SDK for the Anthropic API, pinned at version 0.40.0. Used to call Claude for remediation plan generation.",
+      "file_type": "concept",
+      "id": "anthropic-python-sdk",
+      "community": 7,
+      "norm_label": "anthropic sdk"
+    },
+    {
+      "label": "requests",
+      "type": "module",
+      "source_file": "requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python HTTP library, pinned at version 2.32.3.",
+      "file_type": "concept",
+      "id": "requests-python-lib",
+      "community": 7,
+      "norm_label": "requests"
+    },
+    {
+      "label": "Container read-only filesystem",
+      "type": "concept",
+      "source_file": "docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Container's own filesystem is mounted read-only (read_only: true) for security. tmpfs volumes provided at /tmp and /home/secscan/.cache.",
+      "file_type": "concept",
+      "id": "read-only-container-fs",
+      "community": 2,
+      "norm_label": "container read-only filesystem"
+    },
+    {
+      "label": "Least privilege security model",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security architecture: runs as non-root secscan user, cap_drop ALL with only NET_RAW+NET_ADMIN added, no-new-privileges, read-only host FS, pinned versions, no secrets in image/env/git.",
+      "file_type": "concept",
+      "id": "least-privilege-security-model",
+      "community": 3,
+      "norm_label": "least privilege security model"
+    },
+    {
+      "label": ".env",
+      "type": "file",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Environment configuration file. Contains non-secret settings (SLACK_CHANNEL_ID, SCAN_SCHEDULE_CRON, NMAP toggles). Secrets should NOT be placed here.",
+      "file_type": "concept",
+      "id": "env-config-file",
+      "community": 3,
+      "norm_label": ".env"
+    },
+    {
+      "label": "run_scan.sh",
+      "type": "function",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Script invoked via docker compose exec to trigger a manual scan outside the scheduled cron.",
+      "file_type": "concept",
+      "id": "run-scan-script",
+      "community": 3,
+      "norm_label": "run_scan.sh"
+    },
+    {
+      "label": "Trivy vulnerability database",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Trivy's vulnerability database (~500MB-1GB) downloaded on first run, cached in the scan_reports volume's neighboring cache layer on subsequent runs.",
+      "file_type": "concept",
+      "id": "trivy-vulnerability-db",
+      "community": 0,
+      "norm_label": "trivy vulnerability database"
+    },
+    {
+      "label": "OS package CVEs",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Common Vulnerabilities and Exposures tracked by Trivy and debsecan against installed OS package versions.",
+      "file_type": "concept",
+      "id": "os-package-cves",
+      "community": 0,
+      "norm_label": "os package cves"
+    },
+    {
+      "label": "Web-layer misconfigurations",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security issues the nginx config check protects against: missing HSTS, weak CSP, missing X-Frame-Options, exposed server_tokens, outdated TLS versions, missing rate limiting.",
+      "file_type": "concept",
+      "id": "web-layer-misconfigurations",
+      "community": 0,
+      "norm_label": "web-layer misconfigurations"
+    },
+    {
+      "label": "Network exposure",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Risk category covered by nmap: real open ports on the host that may be exploitable.",
+      "file_type": "concept",
+      "id": "network-exposure",
+      "community": 0,
+      "norm_label": "network exposure"
+    },
+    {
+      "label": "SSH misconfigurations",
+      "type": "concept",
+      "source_file": "README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security issues the SSH config check protects against: PermitRootLogin enabled, PasswordAuthentication enabled, excessive LoginGraceTime, high MaxAuthTries, X11Forwarding enabled.",
+      "file_type": "concept",
+      "id": "ssh-misconfigurations",
+      "community": 0,
+      "norm_label": "ssh misconfigurations"
+    }
+  ],
+  "links": [
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks",
+      "target": "scripts_checks_nginx_checks_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks",
+      "target": "scripts_checks_nginx_checks_check_absent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks",
+      "target": "scripts_checks_nginx_checks_check_present",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks",
+      "target": "scripts_checks_nginx_checks_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L69",
+      "weight": 1.0,
+      "context": "call",
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks_sh__entry",
+      "target": "scripts_checks_nginx_checks_check_absent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L45",
+      "weight": 1.0,
+      "context": "call",
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks_sh__entry",
+      "target": "scripts_checks_nginx_checks_check_present",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L39",
+      "weight": 1.0,
+      "context": "call",
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks_check_absent",
+      "target": "scripts_checks_nginx_checks_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/nginx_checks.sh",
+      "source_location": "L30",
+      "weight": 1.0,
+      "context": "call",
+      "_origin": "ast",
+      "source": "scripts_checks_nginx_checks_check_present",
+      "target": "scripts_checks_nginx_checks_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_ssh_checks",
+      "target": "scripts_checks_ssh_checks_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_ssh_checks",
+      "target": "scripts_checks_ssh_checks_get_effective_value",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_checks_ssh_checks",
+      "target": "scripts_checks_ssh_checks_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/checks/ssh_checks.sh",
+      "source_location": "L39",
+      "weight": 1.0,
+      "context": "call",
+      "_origin": "ast",
+      "source": "scripts_checks_ssh_checks_sh__entry",
+      "target": "scripts_checks_ssh_checks_add_finding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/entrypoint.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_entrypoint",
+      "target": "scripts_entrypoint_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_build_user_prompt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L154",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_call_claude",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L223",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_post_to_slack",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L68",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_read_secret",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_read_truncated",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate",
+      "target": "scripts_remediate_summarize_nmap_xml",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L155",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_call_claude",
+      "target": "scripts_remediate_read_secret",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L167",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_post_to_slack",
+      "target": "scripts_remediate_read_secret",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_read_secret",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_build_user_prompt",
+      "target": "scripts_remediate_read_truncated",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_read_truncated",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_build_user_prompt",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L229",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_main",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_post_to_slack",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_summarize_nmap_xml",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L131",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_build_user_prompt",
+      "target": "scripts_remediate_summarize_nmap_xml",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_rationale_86",
+      "target": "scripts_remediate_summarize_nmap_xml",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L234",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_main",
+      "target": "scripts_remediate_build_user_prompt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L237",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_main",
+      "target": "scripts_remediate_call_claude",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/remediate.py",
+      "source_location": "L244",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_remediate_main",
+      "target": "scripts_remediate_post_to_slack",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/run_scan.sh",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "scripts_run_scan",
+      "target": "scripts_run_scan_sh__entry",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "used-by",
+      "confidence": "INFERRED",
+      "source_file": "requirements.txt",
+      "source": "anthropic-python-sdk",
+      "target": "secscan-agent-service",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "secscan-agent-service",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "authenticates-with",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "claude-api-key-secret",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "uses",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "claude-sonnet-llm",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "depends-on",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "debsecan-tool",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "uses",
+      "confidence": "INFERRED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "env-config-file",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "mounts",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "host-filesystem-mount",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "implements",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "least-privilege-security-model",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "uses-capability",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "net-admin-capability",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "uses-capability",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "net-raw-capability",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "network-mode-host",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "nginx-config-check",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "depends-on",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "nmap-tool",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "invoked-by",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "run-scan-script",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "writes-to",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "scan-reports-volume",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "authenticates-with",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "slack-bot-token-secret",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "posts-to",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "slack-delivery",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "ssh-config-check",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "depends-on",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "secscan-agent-service",
+      "target": "trivy-tool",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "supersedes",
+      "confidence": "INFERRED",
+      "source_file": "README.md",
+      "source": "trivy-tool",
+      "target": "debsecan-tool",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "protects-against",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "trivy-tool",
+      "target": "os-package-cves",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "queries",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "trivy-tool",
+      "target": "trivy-vulnerability-db",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "protects-against",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "debsecan-tool",
+      "target": "os-package-cves",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "processes",
+      "confidence": "INFERRED",
+      "source_file": "README.md",
+      "source": "claude-sonnet-llm",
+      "target": "ssh-config-check",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "protects-against",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "ssh-config-check",
+      "target": "ssh-misconfigurations",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "processes",
+      "confidence": "INFERRED",
+      "source_file": "README.md",
+      "source": "claude-sonnet-llm",
+      "target": "nginx-config-check",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "protects-against",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nginx-config-check",
+      "target": "web-layer-misconfigurations",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "net-admin-capability",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "net-raw-capability",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "protects-against",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "network-exposure",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "controlled-by",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "nmap-intrusive-toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configured-by",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "nmap-script-categories",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "controlled-by",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "nmap-tool",
+      "target": "nmap-self-scan-toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "processes",
+      "confidence": "INFERRED",
+      "source_file": "README.md",
+      "source": "claude-sonnet-llm",
+      "target": "network-exposure",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "processes",
+      "confidence": "INFERRED",
+      "source_file": "README.md",
+      "source": "claude-sonnet-llm",
+      "target": "os-package-cves",
+      "confidence_score": 0.5
+    },
+    {
+      "label": "posts-to",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source": "claude-sonnet-llm",
+      "target": "slack-delivery",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "mounts-secret",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "claude-api-key-secret",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "claude-model-config",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "host-filesystem-mount",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "nmap-intrusive-toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "nmap-script-categories",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "nmap-self-scan-toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "sets",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "no-new-privileges",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "sets",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "read-only-container-fs",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "scan-reports-volume",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "configures",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "scan-schedule-cron",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "mounts-secret",
+      "confidence": "EXTRACTED",
+      "source_file": "docker-compose.yml",
+      "source": "docker-compose-config",
+      "target": "slack-bot-token-secret",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "requirements.txt",
+      "source": "requirements-txt",
+      "target": "anthropic-python-sdk",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "requirements.txt",
+      "source": "requirements-txt",
+      "target": "requests-python-lib",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}

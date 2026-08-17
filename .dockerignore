@@ -1,0 +1,6 @@
+.git
+.env
+secrets/
+reports/
+*.log
+.DS_Store

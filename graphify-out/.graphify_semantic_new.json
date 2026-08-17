@@ -1,0 +1,575 @@
+{
+  "nodes": [
+    {
+      "id": "secscan-agent-service",
+      "label": "secscan-agent",
+      "type": "service",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Containerized security scanning agent that scans the host it is deployed on, runs monthly, and posts Claude-generated remediation plans to Slack."
+    },
+    {
+      "id": "trivy-tool",
+      "label": "Trivy",
+      "type": "tool",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Rootfs vulnerability scanner that checks OS package CVEs against the real installed versions. Primary source of truth for vulnerability detection."
+    },
+    {
+      "id": "debsecan-tool",
+      "label": "debsecan",
+      "type": "tool",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Debian security-tracker cross-check tool. Best-effort secondary check; not authoritative on Ubuntu hosts."
+    },
+    {
+      "id": "ssh-config-check",
+      "label": "SSH configuration hardening check",
+      "type": "function",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Checks SSH hardening settings: PermitRootLogin, PasswordAuthentication, LoginGraceTime, MaxAuthTries, X11Forwarding."
+    },
+    {
+      "id": "nginx-config-check",
+      "label": "Nginx configuration hardening check",
+      "type": "function",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Checks web-layer security settings: HSTS, CSP, X-Frame-Options, server_tokens, TLS version, rate limiting."
+    },
+    {
+      "id": "nmap-tool",
+      "label": "nmap",
+      "type": "tool",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Network scanner with NSE scripts that discovers real open ports on the host and runs CVE-detection scripts. Uses categories default,discovery,safe,vuln,auth by default."
+    },
+    {
+      "id": "claude-sonnet-llm",
+      "label": "Claude (Sonnet)",
+      "type": "service",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Large language model that reads all scan output and writes a prioritized remediation plan with exact commands."
+    },
+    {
+      "id": "slack-delivery",
+      "label": "Slack",
+      "type": "service",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Notification delivery channel. Receives Claude-generated remediation plans and raw scan data. Requires chat:write and files:write scopes."
+    },
+    {
+      "id": "docker-compose-config",
+      "label": "docker-compose.yml",
+      "type": "file",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Docker Compose configuration defining the secscan service, secrets, volumes, capabilities, and resource limits."
+    },
+    {
+      "id": "requirements-txt",
+      "label": "requirements.txt",
+      "type": "file",
+      "source_file": "/home/web-h-034/Downloads/secscan/requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python dependency file pinning anthropic SDK (0.40.0) and requests (2.32.3)."
+    },
+    {
+      "id": "claude-api-key-secret",
+      "label": "Claude API key",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "API key for Anthropic Claude, stored in secrets/claude_api_key.txt with 0400 permissions and mounted as a file at /run/secrets/, never as an env var."
+    },
+    {
+      "id": "slack-bot-token-secret",
+      "label": "Slack bot token",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Slack bot token (xoxb-...) requiring chat:write and files:write OAuth scopes, stored in secrets/slack_bot_token.txt with 0400 permissions."
+    },
+    {
+      "id": "host-filesystem-mount",
+      "label": "Host filesystem (read-only)",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Host root filesystem mounted at /:/host:ro so the agent scans the real machine. Read-only ensures the agent cannot modify anything on the host."
+    },
+    {
+      "id": "scan-reports-volume",
+      "label": "scan_reports named volume",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Docker named volume at /app/reports where raw scan reports are written in timestamped folders."
+    },
+    {
+      "id": "network-mode-host",
+      "label": "network_mode: host",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Container network configuration allowing observation of host network traffic/sockets for real port visibility. Trade-off for blast radius."
+    },
+    {
+      "id": "net-raw-capability",
+      "label": "NET_RAW capability",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Linux capability added to the container, required by nmap for SYN scans."
+    },
+    {
+      "id": "net-admin-capability",
+      "label": "NET_ADMIN capability",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Linux capability added to the container, required by nmap."
+    },
+    {
+      "id": "no-new-privileges",
+      "label": "no-new-privileges:true",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Security option preventing privilege escalation within the container."
+    },
+    {
+      "id": "scan-schedule-cron",
+      "label": "SCAN_SCHEDULE_CRON",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable controlling the scan schedule. Default: 0 3 1 * * (03:00 on the 1st of each month)."
+    },
+    {
+      "id": "nmap-script-categories",
+      "label": "NMAP_SCRIPT_CATEGORIES",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable controlling which nmap NSE script categories are used. Default: default,discovery,safe,vuln,auth (detection only, no active attacks)."
+    },
+    {
+      "id": "claude-model-config",
+      "label": "CLAUDE_MODEL",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable selecting the Claude model. Default: claude-sonnet-5."
+    },
+    {
+      "id": "nmap-self-scan-toggle",
+      "label": "NMAP_SELF_SCAN",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable to disable nmap entirely. Default: true."
+    },
+    {
+      "id": "nmap-intrusive-toggle",
+      "label": "NMAP_ALLOW_INTRUSIVE",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Environment variable to add exploit,dos,brute,fuzzer script categories. Default: false. Requires maintenance window as it can crash services or lock out accounts."
+    },
+    {
+      "id": "anthropic-python-sdk",
+      "label": "anthropic SDK",
+      "type": "module",
+      "source_file": "/home/web-h-034/Downloads/secscan/requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python SDK for the Anthropic API, pinned at version 0.40.0. Used to call Claude for remediation plan generation."
+    },
+    {
+      "id": "requests-python-lib",
+      "label": "requests",
+      "type": "module",
+      "source_file": "/home/web-h-034/Downloads/secscan/requirements.txt",
+      "confidence": "EXTRACTED",
+      "description": "Python HTTP library, pinned at version 2.32.3."
+    },
+    {
+      "id": "read-only-container-fs",
+      "label": "Container read-only filesystem",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/docker-compose.yml",
+      "confidence": "EXTRACTED",
+      "description": "Container's own filesystem is mounted read-only (read_only: true) for security. tmpfs volumes provided at /tmp and /home/secscan/.cache."
+    },
+    {
+      "id": "least-privilege-security-model",
+      "label": "Least privilege security model",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security architecture: runs as non-root secscan user, cap_drop ALL with only NET_RAW+NET_ADMIN added, no-new-privileges, read-only host FS, pinned versions, no secrets in image/env/git."
+    },
+    {
+      "id": "env-config-file",
+      "label": ".env",
+      "type": "file",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Environment configuration file. Contains non-secret settings (SLACK_CHANNEL_ID, SCAN_SCHEDULE_CRON, NMAP toggles). Secrets should NOT be placed here."
+    },
+    {
+      "id": "run-scan-script",
+      "label": "run_scan.sh",
+      "type": "function",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Script invoked via docker compose exec to trigger a manual scan outside the scheduled cron."
+    },
+    {
+      "id": "trivy-vulnerability-db",
+      "label": "Trivy vulnerability database",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Trivy's vulnerability database (~500MB-1GB) downloaded on first run, cached in the scan_reports volume's neighboring cache layer on subsequent runs."
+    },
+    {
+      "id": "os-package-cves",
+      "label": "OS package CVEs",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Common Vulnerabilities and Exposures tracked by Trivy and debsecan against installed OS package versions."
+    },
+    {
+      "id": "web-layer-misconfigurations",
+      "label": "Web-layer misconfigurations",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security issues the nginx config check protects against: missing HSTS, weak CSP, missing X-Frame-Options, exposed server_tokens, outdated TLS versions, missing rate limiting."
+    },
+    {
+      "id": "network-exposure",
+      "label": "Network exposure",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Risk category covered by nmap: real open ports on the host that may be exploitable."
+    },
+    {
+      "id": "ssh-misconfigurations",
+      "label": "SSH misconfigurations",
+      "type": "concept",
+      "source_file": "/home/web-h-034/Downloads/secscan/README.md",
+      "confidence": "EXTRACTED",
+      "description": "Security issues the SSH config check protects against: PermitRootLogin enabled, PasswordAuthentication enabled, excessive LoginGraceTime, high MaxAuthTries, X11Forwarding enabled."
+    }
+  ],
+  "edges": [
+    {
+      "source": "secscan-agent-service",
+      "target": "trivy-tool",
+      "label": "depends-on",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "debsecan-tool",
+      "label": "depends-on",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "ssh-config-check",
+      "label": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "nginx-config-check",
+      "label": "calls",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "nmap-tool",
+      "label": "depends-on",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "claude-sonnet-llm",
+      "label": "uses",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "claude-sonnet-llm",
+      "target": "slack-delivery",
+      "label": "posts-to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "slack-delivery",
+      "label": "posts-to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "claude-api-key-secret",
+      "label": "authenticates-with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "slack-bot-token-secret",
+      "label": "authenticates-with",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "host-filesystem-mount",
+      "label": "mounts",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "scan-reports-volume",
+      "label": "writes-to",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "network-mode-host",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "net-raw-capability",
+      "label": "uses-capability",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "net-admin-capability",
+      "label": "uses-capability",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "net-raw-capability",
+      "label": "requires",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "net-admin-capability",
+      "label": "requires",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "secscan-agent-service",
+      "label": "contains",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "host-filesystem-mount",
+      "label": "defines",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "scan-reports-volume",
+      "label": "defines",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "scan-schedule-cron",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "nmap-script-categories",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "claude-model-config",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "nmap-self-scan-toggle",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "nmap-intrusive-toggle",
+      "label": "configures",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "no-new-privileges",
+      "label": "sets",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "read-only-container-fs",
+      "label": "sets",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "claude-api-key-secret",
+      "label": "mounts-secret",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "docker-compose-config",
+      "target": "slack-bot-token-secret",
+      "label": "mounts-secret",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "requirements-txt",
+      "target": "anthropic-python-sdk",
+      "label": "contains",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "requirements-txt",
+      "target": "requests-python-lib",
+      "label": "contains",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "trivy-tool",
+      "target": "os-package-cves",
+      "label": "protects-against",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "debsecan-tool",
+      "target": "os-package-cves",
+      "label": "protects-against",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "ssh-config-check",
+      "target": "ssh-misconfigurations",
+      "label": "protects-against",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nginx-config-check",
+      "target": "web-layer-misconfigurations",
+      "label": "protects-against",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "network-exposure",
+      "label": "protects-against",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "claude-sonnet-llm",
+      "target": "os-package-cves",
+      "label": "processes",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "claude-sonnet-llm",
+      "target": "ssh-config-check",
+      "label": "processes",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "claude-sonnet-llm",
+      "target": "nginx-config-check",
+      "label": "processes",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "claude-sonnet-llm",
+      "target": "network-exposure",
+      "label": "processes",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "least-privilege-security-model",
+      "label": "implements",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "run-scan-script",
+      "label": "invoked-by",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "trivy-tool",
+      "target": "trivy-vulnerability-db",
+      "label": "queries",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "anthropic-python-sdk",
+      "target": "secscan-agent-service",
+      "label": "used-by",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "nmap-script-categories",
+      "label": "configured-by",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "nmap-self-scan-toggle",
+      "label": "controlled-by",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "nmap-tool",
+      "target": "nmap-intrusive-toggle",
+      "label": "controlled-by",
+      "confidence": "EXTRACTED"
+    },
+    {
+      "source": "secscan-agent-service",
+      "target": "env-config-file",
+      "label": "uses",
+      "confidence": "INFERRED"
+    },
+    {
+      "source": "trivy-tool",
+      "target": "debsecan-tool",
+      "label": "supersedes",
+      "confidence": "INFERRED"
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 30907,
+  "output_tokens": 0
+}

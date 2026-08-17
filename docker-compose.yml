@@ -1,0 +1,82 @@
+services:
+  brahmadanda:
+    build: .
+    image: brahma-danda:1.0.0        # pinned tag — never ':latest' in prod
+    container_name: brahma-danda
+    restart: unless-stopped
+
+    # ✅ Read-only mount of the HOST filesystem so we scan the real machine,
+    #    not the scanner's own throwaway container fs. Read-only = the agent
+    #    can never modify anything on the host it's auditing.
+    volumes:
+      - /:/host:ro
+      - scan_reports:/app/reports
+
+    # ⚠️ TRADE-OFF, not a default we make silently: nmap needs to see the
+    #    HOST's real network namespace to report the host's actual open
+    #    ports (not the container's own isolated ports, which would be
+    #    meaningless). That requires network_mode: host. This is the one
+    #    place this container's blast radius is wider than "read-only file
+    #    access" — it can observe host network traffic/sockets, though it
+    #    still cannot modify the host (root fs stays read-only below).
+    #    Set NMAP_SELF_SCAN=false in .env to disable nmap and drop this
+    #    requirement back to plain read-only file scanning only.
+    network_mode: host
+
+    # ✅ Otherwise least privilege: no --privileged. Only the two
+    #    capabilities nmap's SYN scan actually needs are added back after
+    #    dropping everything else.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    read_only: true          # container's OWN filesystem is still read-only
+    tmpfs:
+      - /tmp
+      - /home/brahmadanda/.cache
+
+    environment:
+      # Non-secret config only. Actual credentials come from `secrets:` below.
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID:?set SLACK_CHANNEL_ID in .env}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-ornith-1.0}
+      - SCAN_SCHEDULE_CRON=${SCAN_SCHEDULE_CRON:-0 3 1 * *}   # default: 03:00 on the 1st of every month
+      - HOSTNAME_OVERRIDE=${HOSTNAME_OVERRIDE:-}
+      # Safe by default: detection scripts only. See README before widening —
+      # dos/exploit/brute/fuzzer categories actively attack the host they run on.
+      - NMAP_SELF_SCAN=${NMAP_SELF_SCAN:-true}
+      - NMAP_SCRIPT_CATEGORIES=${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe,vuln,auth}
+      - NMAP_ALLOW_INTRUSIVE=${NMAP_ALLOW_INTRUSIVE:-false}
+      # ── Custom Anthropic-compatible gateway (optional) ──
+      # Set these to route the remediation LLM through a proxy/custom endpoint.
+      # When set, ANTHROPIC_AUTH_TOKEN takes precedence over /run/secrets/claude_api_key.
+      # Leave unset to fall back to the classic claude_api_key secret.
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-}
+      # ── Local Ollama support (optional) ──
+      # Set these to use a local Ollama instance instead of external LLM API.
+      # Ollama takes precedence over ANTHROPIC_* if both are set.
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder-v2:16b}
+
+    # ✅ Secrets mounted as files at /run/secrets/<name>, never as env vars
+    #    (env vars leak via `docker inspect` / `ps`; files with 0400 perms don't).
+    #    This works in plain `docker compose`, no Swarm required.
+    secrets:
+      - slack_bot_token
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+
+secrets:
+  slack_bot_token:
+    file: ./secrets/slack_bot_token.txt
+
+volumes:
+  scan_reports:
