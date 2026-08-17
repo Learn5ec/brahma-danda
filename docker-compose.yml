@@ -1,9 +1,22 @@
 services:
+  # Init container — ensures trivy_cache volume is owned by brahmadanda (UID 999)
+  # so the scan user can write to it. Runs before brahmadanda starts.
+  brahma-danda-init:
+    image: alpine:3.20
+    user: "0"
+    volumes:
+      - trivy_cache:/home/brahmadanda/.cache/trivy
+    command: ["sh", "-c", "chown -R 999:999 /home/brahmadanda/.cache/trivy"]
+    tmpfs: []
+
   brahmadanda:
     build: .
     image: brahma-danda:1.0.0        # pinned tag — never ':latest' in prod
     container_name: brahma-danda
     restart: unless-stopped
+    depends_on:
+      brahma-danda-init:
+        condition: service_completed_successfully
 
     # ✅ Read-only mount of the HOST filesystem so we scan the real machine,
     #    not the scanner's own throwaway container fs. Read-only = the agent
@@ -11,6 +24,7 @@ services:
     volumes:
       - /:/host:ro
       - scan_reports:/app/reports
+      - trivy_cache:/home/brahmadanda/.cache/trivy   # persistent vuln DB cache
 
     # ⚠️ TRADE-OFF, not a default we make silently: nmap needs to see the
     #    HOST's real network namespace to report the host's actual open
@@ -61,6 +75,9 @@ services:
       # Ollama takes precedence over ANTHROPIC_* if both are set.
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder-v2:16b}
+      # ── Trivy cache — tmpfs is world-writable (1777), needed because we
+      #    run without CAP_CHOWN and can't fix /home/brahmadanda/.cache perm. ──
+      - TRIVY_HOME=/tmp
 
     # ✅ Secrets mounted as files at /run/secrets/<name>, never as env vars
     #    (env vars leak via `docker inspect` / `ps`; files with 0400 perms don't).
@@ -80,3 +97,4 @@ secrets:
 
 volumes:
   scan_reports:
+  trivy_cache:

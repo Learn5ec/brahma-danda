@@ -12,12 +12,21 @@ HOST_LABEL="${HOSTNAME_OVERRIDE:-$(cat /host/etc/hostname 2>/dev/null || echo un
 echo "[run_scan] starting scan of ${HOST_LABEL} at ${TS}"
 
 # ── 1. Trivy — OS package + known-CVE scan against the mounted host root ──
+# Pre-create trivy cache dir — /home/brahmadanda/.cache is a tmpfs owned by root
+# so trivy (running as brahmadanda) can't mkdir inside it. Also ensure /tmp/trivy
+# is writable since some trivy versions fall back to ~/.cache/trivy.
+mkdir -p /home/brahmadanda/.cache/trivy 2>/dev/null || true
+mkdir -p /tmp/trivy 2>/dev/null || true
+# Also fix ownership on the tmpfs cache dir (we can't chown without CAP_CHOWN,
+# but we can mkdir it as root... actually we run as brahmadanda. So we need the
+# volume mount instead — see docker-compose.yml trivy_cache).
 echo "[run_scan] running trivy rootfs scan..."
 trivy rootfs /host \
   --format json \
   --severity CRITICAL,HIGH,MEDIUM \
   --scanners vuln \
   --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker \
+  --timeout 30m \
   --output "${REPORT_DIR}/trivy.json" \
   2> "${REPORT_DIR}/trivy.stderr.log" \
   || echo "[run_scan] trivy exited non-zero, continuing (see trivy.stderr.log)"

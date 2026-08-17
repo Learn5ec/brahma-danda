@@ -2,6 +2,7 @@
 set -euo pipefail
 
 echo "[entrypoint] brahma-danda starting"
+
 echo "[entrypoint] schedule: ${SCAN_SCHEDULE_CRON}"
 
 # Render the real schedule into a writable crontab (image fs is read-only,

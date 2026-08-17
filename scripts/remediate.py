@@ -248,7 +248,7 @@ def upload_file_to_slack(channel: str, file_path: Path, title: str) -> bool:
                 }
             ],
             "channel_id": channel,
-            "initial_comment": f"{host} — {file_path.name}",
+            "initial_comment": f"{title}",
         },
         timeout=30,
     )
