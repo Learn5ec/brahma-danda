@@ -1,1 +1,0 @@
-ufw not found or insufficient permissions

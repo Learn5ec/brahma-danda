@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         bsdmainutils \
         dnsutils \
+        sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install testssl.sh ──
@@ -39,7 +40,9 @@ RUN curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPE
     && mv "${SUPERCRONIC}" /usr/local/bin/supercronic
 
 # ── Non-root user — the container only ever needs READ access to the host mount ──
-RUN groupadd -r brahmadanda && useradd -r -g brahmadanda -m -d /home/brahmadanda brahmadanda
+RUN groupadd -r brahmadanda && useradd -r -g brahmadanda -m -d /home/brahmadanda brahmadanda \
+    && echo "brahmadanda ALL=(root) NOPASSWD: /usr/sbin/iptables-save, /usr/sbin/nft, /usr/sbin/ufw, /usr/bin/ss" > /etc/sudoers.d/brahmadanda \
+    && chmod 0440 /etc/sudoers.d/brahmadanda
 
 WORKDIR /app
 

@@ -7,6 +7,7 @@ Secrets are read from /run/secrets/*, never from environment variables.
 """
 import argparse
 import datetime
+import json
 import os
 import re
 import sys
@@ -16,50 +17,15 @@ from pathlib import Path
 import requests
 from anthropic import Anthropic
 
-MAX_RAW_CHARS_PER_FILE = 60_000  # keep the prompt bounded on noisy hosts
+from prompts import (
+    SYSTEM_PROMPT,
+    PER_FILE_SYSTEM_PROMPT,
+    COMBINE_SYSTEM_PROMPT,
+    MAX_TOKENS_PER_FILE,
+    MAX_TOKENS_COMBINE,
+    MAX_RAW_CHARS_PER_FILE,
+)
 
-SYSTEM_PROMPT = """You are a security engineer producing a Threat Brief from raw \
-vulnerability-scan output for a single Linux server. You will receive:
-- Trivy JSON (OS package CVEs, matched against real installed versions — treat as \
-authoritative for CVE presence/absence. Disregard nmap CVEs if Trivy shows patched)
-- debsecan output (Debian-tracker cross-check; best-effort)
-- Config check results (SSH, nginx, docker; pass/fail per rule)
-- nmap self-scan output (open ports + behavioural script results)
-- ss -tlnp and firewall status (shows which services are internet-reachable)
-
-CRITICAL: Use `ss_listeners` and firewall data to classify EVERY finding's exposure:
-- Internet-reachable: Bound to 0.0.0.0, [::], or public IP, and not blocked by firewall.
-- Local-only: Bound to 127.0.0.1 or ::1. (Lowers risk significantly).
-
-CRITICAL: Docker misconfigurations (unencrypted TCP socket, world-readable local socket) \
-are CRITICAL risk if they allow privilege escalation or unauthenticated access.
-
-Produce a Slack-native Threat Brief with this EXACT structure (use emojis, no ## headers):
-
-:rotating_light: *Threat Brief — {host}*
-1–3 sentences: internet-reachable services count, highest-risk finding, \
-what an attacker could do with it (concrete action, e.g., "allows unauthenticated read of DB").
-
-:red_circle: *Critical* / :orange_circle: *High — Fix Now*
-• *[Finding Name]* — concrete impact in one line
-  `exact fix command or config change`
-
-:yellow_circle: *Medium — Fix This Sprint*
-• *[Finding Name]* — concrete impact
-  `exact fix command`
-
-:white_check_mark: *Context & Passed Checks*
-X of Y SSH checks passed. N services on 0.0.0.0 (internet-reachable). N local-only.
-
-:mag: *Suggested Re-Scan Scope*
-Exactly what to verify after fixes are applied.
-
-Rules:
-- Be concrete. Never say "add security headers" — give the exact header/value.
-- Do not list individual passing checks.
-- If debsecan and Trivy disagree, trust Trivy and explain why.
-- Do NOT use Markdown headers (##, ###). Use Slack mrkdwn: *bold*, _italic_.
-"""
 
 
 def read_secret(name: str) -> str:
@@ -70,12 +36,55 @@ def read_secret(name: str) -> str:
     return path.read_text().strip()
 
 
-def read_truncated(path: Path) -> str:
+def summarize_trivy_json(json_path: Path) -> str:
+    """Extract top 50 CVEs from trivy JSON, sorted by severity. Strips metadata."""
+    if not json_path.exists():
+        return "(trivy scan did not run or trivy.json not found)"
+    try:
+        data = json.loads(json_path.read_text(errors="replace"))
+    except (json.JSONDecodeError, Exception):
+        return "(failed to parse trivy.json)"
+
+    cves = []
+    for item in data.get("Results", []):
+        for vuln in item.get("Vulnerabilities", []):
+            severity = vuln.get("Severity", "MEDIUM").lower()
+            cves.append({
+                "id": vuln.get("VulnerabilityID", "UNKNOWN"),
+                "pkg": vuln.get("PkgName", "unknown"),
+                "version": vuln.get("InstalledVersion", "?"),
+                "fix": vuln.get("FixedVersion", "not fixed"),
+                "severity": severity,
+                "title": vuln.get("Title", "Unknown vulnerability"),
+                "description": vuln.get("Description", "")[:200],
+            })
+
+    # Sort by severity: critical > high > medium > low
+    severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "unknown": 4}
+    cves.sort(key=lambda x: severity_order.get(x["severity"], 4))
+
+    # Take top 50
+    top_cves = cves[:50]
+
+    lines = [f"Total CVEs found: {len(cves)}"]
+    lines.append("")
+    for i, cve in enumerate(top_cves, 1):
+        lines.append(f"{i}. [{cve['severity'].upper()}] {cve['id']} in {cve['pkg']} ({cve['version']})")
+        lines.append(f"   {cve['title']}")
+        if cve['fix'] != "not fixed":
+            lines.append(f"   Fix: upgrade to {cve['fix']}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def read_truncated(path: Path, max_lines: int = 5000) -> str:
     if not path.exists():
         return f"(file not found: {path.name})"
     text = path.read_text(errors="replace")
-    if len(text) > MAX_RAW_CHARS_PER_FILE:
-        return text[:MAX_RAW_CHARS_PER_FILE] + f"\n...[truncated, {len(text)} chars total]"
+    lines = text.splitlines()
+    if len(lines) > max_lines:
+        return "\n".join(lines[:max_lines]) + f"\n...[truncated, {len(lines)} lines total]"
     return text
 
 
@@ -136,7 +145,7 @@ def md_to_mrkdwn(text: str) -> str:
 
 
 def build_user_prompt(report_dir: Path, host: str) -> str:
-    trivy = read_truncated(report_dir / "trivy.json")
+    trivy = summarize_trivy_json(report_dir / "trivy.json")
     debsecan = read_truncated(report_dir / "debsecan.txt")
     ssh_checks = read_truncated(report_dir / "ssh_checks.json")
     nginx_checks = read_truncated(report_dir / "nginx_checks.json")
@@ -157,6 +166,37 @@ def build_user_prompt(report_dir: Path, host: str) -> str:
         nmap_summary = nmap_summary[:MAX_RAW_CHARS_PER_FILE] + "\n...[truncated]"
 
     return f"""Host: {host}
+
+=== YOUR TASK ===
+Produce a Threat Brief addressed to the human reviewer (not the scan bot).
+Use Slack mrkdwn (*bold*, _italic_, bullet •). No ## headers. No HTML.
+
+:rotating_light: *Threat Brief — {host}*
+1–3 sentences: number of internet-reachable services, highest-risk finding, concrete attacker action.
+
+*Critical*
+• *Risk:* one-line risk title
+  _Evidence:_ source file, exact field/line, exact value
+  _Impact:_ concrete consequence if unaddressed
+
+*High*
+(same format)
+
+:information_source: *Note to reviewer*
+This brief is for your review. It covers Critical and High findings only. \
+Low and informational findings are in the raw files attached in the thread. \
+Remediation decisions are yours — this brief provides risk context only.
+
+RULES:
+- Report only Critical and High findings. Omit Low and Informational entirely.
+- Every finding MUST have Risk + Evidence (file, location, exact value) + Impact.
+- Do NOT prescribe fixes, commands, or remediation steps.
+- Do NOT include recommendations, re-scan scope, or passed-checks sections.
+- If debsecan and Trivy disagree, trust Trivy and note why.
+- If a severity tier has no findings, omit that tier's heading entirely.
+- Always output the :information_source: footer block verbatim as the final section.
+
+=== ACTUAL DATA FOLLOWS ===
 
 === TRIVY (rootfs scan, JSON) ===
 {trivy}
@@ -193,49 +233,138 @@ NFTables:
 """
 
 
-def call_claude(model: str, user_prompt: str) -> str:
-    # Prefer env-driven gateway config (custom proxy / local endpoint),
-    # fall back to /run/secrets/claude_api_key for the default Anthropic
-    # cloud API.  This lets the same container run against any
-    # Anthropic-compatible endpoint without rebuilding the image.
+def _make_anthropic_client():
+    """Return (client, model) from env/secrets."""
     base_url = os.environ.get("ANTHROPIC_BASE_URL")
-    api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN") or read_secret("claude_api_key")
+    api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    
+    # Track if we're using a Bearer token rather than a native Anthropic key
+    is_bearer_token = bool(api_key)
+    if not api_key:
+        api_key = read_secret("claude_api_key")
 
+    model = os.environ.get("ANTHROPIC_MODEL") or os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
+    
     kwargs = {"api_key": api_key}
     if base_url:
         kwargs["base_url"] = base_url
         print(f"[remediate] using custom Anthropic gateway: {base_url}")
+        
+        # Third-party gateways often expect standard Bearer auth instead of
+        # Anthropic's proprietary x-api-key header.
+        if is_bearer_token:
+            kwargs["default_headers"] = {"Authorization": f"Bearer {api_key}"}
 
-    client = Anthropic(**kwargs)
+    return Anthropic(**kwargs), model
+
+
+def call_claude(client: Anthropic, model: str, system: str, user_prompt: str,
+                max_tokens: int = 2048) -> str:
     resp = client.messages.create(
         model=model,
-        max_tokens=4000,
-        system=SYSTEM_PROMPT,
+        max_tokens=max_tokens,
+        system=system,
         messages=[{"role": "user", "content": user_prompt}],
     )
     return "".join(block.text for block in resp.content if block.type == "text")
 
 
-def call_ollama(model: str, base_url: str, system_prompt: str, user_prompt: str) -> str:
-    """Call a local Ollama instance using the OpenAI-compatible API."""
-    import json as _json
-
+def call_ollama(model: str, base_url: str, system: str, user_prompt: str,
+                num_predict: int = 2048) -> str:
+    """Call a local Ollama instance using the chat API."""
     url = f"{base_url.rstrip('/')}/api/chat"
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": system},
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
-        "options": {"num_predict": 4000},
+        "options": {"num_predict": num_predict},
     }
-
     print(f"[remediate] calling Ollama ({model}) at {base_url}")
     resp = requests.post(url, json=payload, timeout=600)
     resp.raise_for_status()
-    data = resp.json()
-    return data.get("message", {}).get("content", "")
+    return resp.json().get("message", {}).get("content", "")
+
+
+def _llm(system: str, user: str, *, client=None, model: str = "",
+         ollama_url: str = "", ollama_model: str = "", max_tokens: int = 2048) -> str | None:
+    """Try Claude then Ollama; return None if both fail."""
+    if client:
+        try:
+            return call_claude(client, model, system, user, max_tokens)
+        except Exception as e:
+            print(f"[remediate] Claude failed: {e}")
+    if ollama_url and ollama_model:
+        try:
+            return call_ollama(ollama_model, ollama_url, system, user, max_tokens)
+        except Exception as e:
+            print(f"[remediate] Ollama failed: {e}")
+    return None
+
+
+# ── Per-file analysis helpers ─────────────────────────────────────────────────
+
+def _file_inputs(report_dir: Path) -> list[tuple[str, str]]:
+    """Return (label, content) for every available scan artefact."""
+    inputs = []
+    trivy = summarize_trivy_json(report_dir / "trivy.json")
+    if "(trivy scan did not run" not in trivy:
+        inputs.append(("trivy.json", trivy))
+    for fname in ["debsecan.txt", "combined_meta.json", "ss_listeners.txt", "ufw_status.txt",
+                  "iptables.txt", "nftables.txt", "lynis-report.dat"]:
+        content = read_truncated(report_dir / fname)
+        if "(file not found" not in content:
+            inputs.append((fname, content))
+    nmap = summarize_nmap_xml(report_dir / "nmap.xml")
+    if "(nmap scan did not run" not in nmap and "(nmap ran but found no open ports)" not in nmap:
+        inputs.append(("nmap.xml", nmap))
+    for f in sorted(report_dir.glob("testssl_*.json")):
+        content = read_truncated(f)
+        if "(file not found" not in content:
+            inputs.append((f.name, content))
+    return inputs
+
+
+def analyze_files(report_dir: Path, host: str, **llm_kw) -> list[dict]:
+    """Send each scan artefact to the LLM individually; return flat findings list."""
+    inputs = _file_inputs(report_dir)
+    all_findings: list[dict] = []
+    print(f"[remediate] analysing {len(inputs)} scan artefact(s) individually …")
+    for label, content in inputs:
+        if len(content) > MAX_RAW_CHARS_PER_FILE:
+            content = content[:MAX_RAW_CHARS_PER_FILE] + "\n...[truncated]"
+        user = f"Host: {host}\nSource file: {label}\n\n=== FILE CONTENT ===\n{content}"
+        print(f"[remediate]   → {label} ({len(content):,} chars)")
+        raw = _llm(PER_FILE_SYSTEM_PROMPT, user, max_tokens=MAX_TOKENS_PER_FILE, **llm_kw)
+        if not raw:
+            print(f"[remediate]   ⚠️  no response for {label}, skipping")
+            continue
+        raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw.strip(), flags=re.MULTILINE)
+        try:
+            findings = json.loads(raw).get("findings", [])
+            for f in findings:
+                f.setdefault("evidence", {})
+                f["evidence"].setdefault("file", label)
+            all_findings.extend(findings)
+            print(f"[remediate]   ✓ {len(findings)} finding(s) from {label}")
+        except json.JSONDecodeError as e:
+            print(f"[remediate]   ⚠️  JSON parse error for {label}: {e} — snippet: {raw[:120]}")
+    return all_findings
+
+
+def combine_findings(all_findings: list[dict], host: str, **llm_kw) -> str | None:
+    """Merge per-file findings into the final Slack Threat Brief via LLM."""
+    if not all_findings:
+        return None
+    system = COMBINE_SYSTEM_PROMPT.replace("{host}", host)
+    user = f"Host: {host}\n\nPer-file findings (JSON):\n{json.dumps(all_findings, indent=2)}"
+    print(f"[remediate] combining {len(all_findings)} finding(s) into Threat Brief …")
+    return _llm(system, user, max_tokens=MAX_TOKENS_COMBINE, **llm_kw)
+
+
 
 
 def split_file(file_path: Path, max_size: int) -> list[Path]:
@@ -262,8 +391,10 @@ def split_file(file_path: Path, max_size: int) -> list[Path]:
     return chunks
 
 
-def upload_file_to_slack(channel: str, file_path: Path, title: str, host: str = "") -> bool:
-    """Upload a file to Slack using the 3-step External Upload API."""
+def upload_file_to_slack(channel: str, file_path: Path, title: str,
+                         host: str = "", thread_ts: str | None = None) -> bool:
+    """Upload a file to Slack (3-step External Upload API).
+    If thread_ts is given the file is attached to that thread."""
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -301,20 +432,18 @@ def upload_file_to_slack(channel: str, file_path: Path, title: str, host: str = 
         )
     content_resp.raise_for_status()
 
-    # Step 3: Complete upload
+    # Step 3: Complete upload — attach to thread if thread_ts given
+    complete_payload: dict = {
+        "files": [{"id": file_id, "title": title}],
+        "channel_id": channel,
+        "initial_comment": f"{host} — {title}" if host else title,
+    }
+    if thread_ts:
+        complete_payload["thread_ts"] = thread_ts
     complete_resp = requests.post(
         "https://slack.com/api/files.completeUploadExternal",
         headers={**headers, "Content-Type": "application/json"},
-        json={
-            "files": [
-                {
-                    "id": file_id,
-                    "title": title,
-                }
-            ],
-            "channel_id": channel,
-            "initial_comment": f"{host} — {title}" if host else title,
-        },
+        json=complete_payload,
         timeout=30,
     )
     complete_resp.raise_for_status()
@@ -322,84 +451,85 @@ def upload_file_to_slack(channel: str, file_path: Path, title: str, host: str = 
     if not complete_data.get("ok"):
         print(f"[remediate] Step 3 failed for {file_path.name}: {complete_data}", file=sys.stderr)
         return False
-
-    # Verify channel membership
-    files = complete_data.get("files", [])
-    if files:
-        channels = files[0].get("channels", [])
-        groups = files[0].get("groups", [])
-        if not channels and not groups:
-            print(f"[remediate] ⚠️ File uploaded but not posted to channel (bot may not be invited): {file_path.name}", file=sys.stderr)
-
     return True
 
 
 def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> None:
+    """Post Threat Brief as channel message; attach raw scan files in its thread."""
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Convert GFM Markdown to Slack mrkdwn
     slack_text = md_to_mrkdwn(markdown)
-    # Slack messages have a ~40k char hard cap; keep headroom.
     if len(slack_text) > 38000:
-        slack_text = slack_text[:38000] + "\n...[truncated — see attached full report]"
+        slack_text = slack_text[:38000] + "\n...[truncated — see attached files in thread]"
 
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn",
-            "text": f":shield: *Monthly security scan complete for `{host}`*"}},
+            "text": f":shield: *Security scan complete for `{host}`*"}},
         {"type": "divider"},
     ]
-
-    # Split text into chunks of 3000 chars
     chunk_size = 3000
     for i in range(0, len(slack_text), chunk_size):
-        chunk = slack_text[i:i+chunk_size]
+        chunk = slack_text[i:i + chunk_size]
         if i > 0:
-            chunk = f"_(continued from previous message)_\n\n{chunk}"
+            chunk = f"_(continued)_\n\n{chunk}"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": chunk}})
 
+    # ── Channel message (Threat Brief only) ──
     msg_resp = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers=headers,
         json={
             "channel": channel,
-            "text": f":shield: Monthly security scan complete for *{host}*",
+            "text": f":shield: Security scan complete for *{host}*",
             "blocks": blocks,
         },
         timeout=30,
     )
     msg_resp.raise_for_status()
-    if not msg_resp.json().get("ok"):
-        print(f"[remediate] Slack chat.postMessage error: {msg_resp.json()}", file=sys.stderr)
+    msg_data = msg_resp.json()
+    if not msg_data.get("ok"):
+        print(f"[remediate] Slack postMessage error: {msg_data}", file=sys.stderr)
 
-    thread_ts = msg_resp.json().get("ts")
+    thread_ts = msg_data.get("ts")
+    if not thread_ts:
+        print("[remediate] ⚠️  no thread_ts — files will NOT be threaded", file=sys.stderr)
 
-    # Attach raw reports using 3-step External Upload API
-    # Split files larger than 50MB into chunks
-    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50MB
+    # Announce that scan files follow in the thread
+    if thread_ts:
+        requests.post(
+            "https://slack.com/api/chat.postMessage",
+            headers=headers,
+            json={
+                "channel": channel,
+                "thread_ts": thread_ts,
+                "text": ":paperclip: Raw scan reports are attached in this thread for reviewer reference.",
+            },
+            timeout=30,
+        )
+
+    # ── Thread: raw scan artefacts ──
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50 MB
     for raw_file in [
-        "trivy.json", "debsecan.txt", "ssh_checks.json", "nginx_checks.json",
-        "docker_checks.json", "nmap.xml", "nmap.txt", "ss_listeners.txt",
-        "ufw_status.txt", "iptables.txt", "lynis.log"
+        "trivy.json", "debsecan.txt", "combined_meta.json", "nmap.xml", "nmap.txt",
+        "ss_listeners.txt", "ufw_status.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
     ]:
         fpath = report_dir / raw_file
         if not fpath.exists():
             continue
-        # Split large files into chunks
         chunks = split_file(fpath, MAX_CHUNK_SIZE)
         for i, chunk in enumerate(chunks, 1):
-            title = f"{raw_file}" if len(chunks) == 1 else f"{raw_file}.{i:03d}"
-            success = upload_file_to_slack(channel, chunk, title, host)
+            title = raw_file if len(chunks) == 1 else f"{raw_file}.{i:03d}"
+            success = upload_file_to_slack(channel, chunk, title, host, thread_ts=thread_ts)
             if not success:
-                print(f"[remediate] ⚠️ Failed to upload {title} to Slack", file=sys.stderr)
-            # Clean up chunk after upload
+                print(f"[remediate] ⚠️  failed to upload {title}", file=sys.stderr)
             chunk.unlink(missing_ok=True)
 
 
 def copy_reports_to_local(report_dir: Path, host: str) -> Path:
     """Copy all raw reports to ~/Downloads/brahma-danda_reports/ for local access."""
     import shutil
-    local_dir = Path.home() / "Downloads" / "brahma-danda_reports" / f"{host}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    local_dir = Path.home() / "Downloads" / "brahma-danda_reports" / f"{host}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
     local_dir.mkdir(parents=True, exist_ok=True)
     for f in report_dir.iterdir():
         if f.is_file():
@@ -410,21 +540,24 @@ def copy_reports_to_local(report_dir: Path, host: str) -> Path:
 
 
 def post_raw_reports_to_slack(channel: str, report_dir: Path, host: str) -> None:
-    """Post raw reports to Slack without a summary when LLM fails."""
+    """Fallback: warning channel message + raw files in its thread."""
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Post a simple text message indicating LLM unavailable and raw reports attached
     msg_resp = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers=headers,
         json={
             "channel": channel,
-            "text": f":warning: Security scan complete for {host} — LLM unavailable, raw reports attached",
+            "text": f":warning: Security scan complete for {host} — LLM unavailable, raw reports in thread",
             "blocks": [
                 {"type": "section", "text": {
                     "type": "mrkdwn",
-                    "text": f":warning: *Security scan complete for `{host}`*\n\nLLM unavailable — summary not generated. Raw reports attached below.",
+                    "text": (
+                        f":warning: *Security scan complete for `{host}`*\n\n"
+                        "LLM summary could not be generated. "
+                        "Raw scan reports are attached in this thread for reviewer reference."
+                    ),
                 }},
                 {"type": "divider"},
             ],
@@ -432,26 +565,20 @@ def post_raw_reports_to_slack(channel: str, report_dir: Path, host: str) -> None
         timeout=30,
     )
     msg_resp.raise_for_status()
+    thread_ts = msg_resp.json().get("ts")
 
-    # Attach all raw reports using 3-step External Upload API
-    # Split files larger than 50MB into chunks
-    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50MB
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024
     for raw_file in [
-        "trivy.json", "debsecan.txt", "ssh_checks.json", "nginx_checks.json",
-        "docker_checks.json", "nmap.xml", "nmap.txt", "ss_listeners.txt",
-        "ufw_status.txt", "iptables.txt", "lynis.log"
+        "trivy.json", "debsecan.txt", "combined_meta.json", "nmap.xml", "nmap.txt",
+        "ss_listeners.txt", "ufw_status.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
     ]:
         fpath = report_dir / raw_file
         if not fpath.exists():
             continue
-        # Split large files into chunks
         chunks = split_file(fpath, MAX_CHUNK_SIZE)
         for i, chunk in enumerate(chunks, 1):
-            title = f"{raw_file}" if len(chunks) == 1 else f"{raw_file}.{i:03d}"
-            success = upload_file_to_slack(channel, chunk, title, host)
-            if not success:
-                print(f"[remediate] ⚠️ Failed to upload {title} to Slack", file=sys.stderr)
-            # Clean up chunk after upload
+            title = raw_file if len(chunks) == 1 else f"{raw_file}.{i:03d}"
+            upload_file_to_slack(channel, chunk, title, host, thread_ts=thread_ts)
             chunk.unlink(missing_ok=True)
 
 
@@ -462,60 +589,49 @@ def main():
     args = parser.parse_args()
 
     report_dir = Path(args.report_dir)
-    # ANTHROPIC_MODEL takes precedence (custom gateway flow), CLAUDE_MODEL is
-    # the legacy env var, "claude-sonnet-5" is the fallback default.
-    model = os.environ.get("ANTHROPIC_MODEL") or os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
     channel = os.environ["SLACK_CHANNEL_ID"]
+    ollama_url = os.environ.get("OLLAMA_BASE_URL", "")
+    ollama_model = os.environ.get("OLLAMA_MODEL", "")
 
-    # Check if Ollama is configured (local model fallback)
-    ollama_url = os.environ.get("OLLAMA_BASE_URL")
-    ollama_model = os.environ.get("OLLAMA_MODEL")
-
-    print(f"[remediate] building prompt from {report_dir}")
-    user_prompt = build_user_prompt(report_dir, args.host)
-
-    # Tiered fallback:
-    #   1. Claude API (primary) → generate summary
-    #   2. Ollama (fallback) → generate summary
-    #   3. Both fail → post raw reports to Slack, copy to ~/Downloads
-    plan_markdown = None
-    backend_used = None
-
-    # Try Claude (custom gateway or cloud API)
-    print(f"[remediate] trying Claude ({model})")
+    # Build Anthropic client (optional — Ollama alone is also valid)
+    claude_client, claude_model = None, ""
     try:
-        plan_markdown = call_claude(model, user_prompt)
-        backend_used = "Claude"
-        print(f"[remediate] Claude succeeded")
-    except Exception as e:
-        print(f"[remediate] Claude call failed: {e}")
-        # Try Ollama if configured
-        if ollama_url and ollama_model:
-            print(f"[remediate] falling back to Ollama: {ollama_model} at {ollama_url}")
-            try:
-                plan_markdown = call_ollama(ollama_model, ollama_url, SYSTEM_PROMPT, user_prompt)
-                backend_used = "Ollama"
-                print(f"[remediate] Ollama succeeded")
-            except Exception as e2:
-                print(f"[remediate] Ollama call also failed: {e2}")
-        else:
-            print(f"[remediate] Ollama not configured — skipping")
+        claude_client, claude_model = _make_anthropic_client()
+    except SystemExit:
+        if not (ollama_url and ollama_model):
+            print("[remediate] No LLM configured — exiting", file=sys.stderr)
+            sys.exit(1)
+        print("[remediate] Claude secret missing — using Ollama only")
 
-    # If both LLMs failed, save locally and post raw reports only
-    if plan_markdown is None:
-        print(f"[remediate] ⚠️ Both Claude and Ollama failed — no summary available")
-        copy_reports_to_local(report_dir, args.host)
+    llm_kw = dict(
+        client=claude_client, model=claude_model,
+        ollama_url=ollama_url, ollama_model=ollama_model,
+    )
+
+    # ── Step 1: analyse each scan artefact individually ──
+    all_findings = analyze_files(report_dir, args.host, **llm_kw)
+
+    # ── Step 2: combine findings into Threat Brief ──
+    threat_brief = combine_findings(all_findings, args.host, **llm_kw)
+
+    # ── Step 3: post to Slack (or fallback) ──
+    if threat_brief is None:
+        print("[remediate] ⚠️  LLM unavailable — no summary generated")
+        try:
+            copy_reports_to_local(report_dir, args.host)
+        except OSError:
+            pass  # container filesystem is read-only; reports stay on scan_reports volume
         print(f"[remediate] posting raw reports to Slack channel {channel}")
         post_raw_reports_to_slack(channel, report_dir, args.host)
         print("[remediate] done (raw reports only)")
         return
 
     plan_path = report_dir / "remediation_plan.md"
-    plan_path.write_text(plan_markdown)
-    print(f"[remediate] plan written to {plan_path}")
+    plan_path.write_text(threat_brief)
+    print(f"[remediate] brief written to {plan_path}")
 
-    print(f"[remediate] posting to Slack channel {channel}")
-    post_to_slack(channel, plan_markdown, report_dir, args.host)
+    print(f"[remediate] posting Threat Brief to Slack channel {channel}")
+    post_to_slack(channel, threat_brief, report_dir, args.host)
     print("[remediate] done")
 
 
