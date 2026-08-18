@@ -6,13 +6,16 @@ services:
     user: "0"
     volumes:
       - trivy_cache:/home/brahmadanda/.cache/trivy
-    command: ["sh", "-c", "chown -R 999:999 /home/brahmadanda/.cache/trivy"]
+      - scan_reports:/app/reports
+    command: ["sh", "-c", "chown -R 0:0 /home/brahmadanda/.cache/trivy /app/reports"]
     tmpfs: []
 
   brahmadanda:
     build: .
     image: brahma-danda:1.0.0        # pinned tag — never ':latest' in prod
     container_name: brahma-danda
+    user: "0"                         # run as root so iptables/nft/ufw work;
+                                      # host filesystem stays read-only (/:/host:ro)
     restart: unless-stopped
     depends_on:
       brahma-danda-init:
@@ -46,12 +49,12 @@ services:
     cap_add:
       - NET_RAW
       - NET_ADMIN
-    security_opt:
-      - no-new-privileges:true
     read_only: true          # container's OWN filesystem is still read-only
     tmpfs:
       - /tmp
       - /home/brahmadanda/.cache
+      - /root/.cache
+      - /root
 
     environment:
       # Non-secret config only. Actual credentials come from `secrets:` below.

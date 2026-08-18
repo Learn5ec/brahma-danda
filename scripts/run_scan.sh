@@ -22,7 +22,7 @@ trivy rootfs /host \
   --format json \
   --severity CRITICAL,HIGH,MEDIUM \
   --scanners vuln \
-  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker \
+  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker,/host/root/.gnupg \
   --timeout 30m \
   --output "${REPORT_DIR}/trivy.json" \
   2> "${REPORT_DIR}/trivy.stderr.log" \
