@@ -61,14 +61,14 @@ services:
     environment:
       # Non-secret config only. Actual credentials come from `secrets:` below.
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID:?set SLACK_CHANNEL_ID in .env}
-      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-5}
-      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-ornith-1.0}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-}
       - SCAN_SCHEDULE_CRON=${SCAN_SCHEDULE_CRON:-0 3 1 * *}   # default: 03:00 on the 1st of every month
       - HOSTNAME_OVERRIDE=${HOSTNAME_OVERRIDE:-}
       # Safe by default: detection scripts only. See README before widening —
       # dos/exploit/brute/fuzzer categories actively attack the host they run on.
       - NMAP_SELF_SCAN=${NMAP_SELF_SCAN:-true}
-      - NMAP_SCRIPT_CATEGORIES=${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe,vuln,auth}
+      - NMAP_SCRIPT_CATEGORIES=${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe,auth,version}
       - NMAP_ALLOW_INTRUSIVE=${NMAP_ALLOW_INTRUSIVE:-false}
       # ── Custom Anthropic-compatible gateway (optional) ──
       # Set these to route the remediation LLM through a proxy/custom endpoint.
@@ -77,10 +77,9 @@ services:
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
       - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-}
       # ── Local Ollama support (optional) ──
-      # Set these to use a local Ollama instance instead of external LLM API.
-      # Ollama takes precedence over ANTHROPIC_* if both are set.
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder-v2:16b}
+      # Set these to use a local Ollama instance as primary/fallback LLM.
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-}
       # ── Trivy cache — points to the persistent trivy_cache named volume
       #    so the vuln DB survives container restarts/rebuilds.
       - TRIVY_CACHE_DIR=/root/.cache/trivy
