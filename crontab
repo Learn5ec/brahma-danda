@@ -1,2 +1,2 @@
-__SCHEDULE__ if [ -z "$(ls -A /app/reports/20$(date +%%m) 2>/dev/null)" ]; then /app/scripts/run_scan.sh >> /app/reports/last_run.log 2>&1; else echo "[cron] scan already posted for $(date +%%Y-%%m), skipping"; fi
+__SCHEDULE__ /app/scripts/run_scan.sh >> /app/reports/last_run.log 2>&1
 0 * * * * find /app/reports -mindepth 2 -type f -name "*.json" -o -name "*.txt" -o -name "*.xml" -o -name "*.dat" | xargs ls -t 2>/dev/null | tail -n +200 | xargs rm -f 2>/dev/null || true
