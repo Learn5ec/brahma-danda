@@ -17,15 +17,12 @@ echo "[run_scan] starting scan of ${HOST_LABEL} at ${TS}"
 # is writable since some trivy versions fall back to ~/.cache/trivy.
 mkdir -p /home/brahmadanda/.cache/trivy 2>/dev/null || true
 mkdir -p /tmp/trivy 2>/dev/null || true
-# Also fix ownership on the tmpfs cache dir (we can't chown without CAP_CHOWN,
-# but we can mkdir it as root... actually we run as brahmadanda. So we need the
-# volume mount instead — see docker-compose.yml trivy_cache).
 echo "[run_scan] running trivy rootfs scan..."
 trivy rootfs /host \
   --format json \
   --severity CRITICAL,HIGH,MEDIUM \
   --scanners vuln \
-  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker \
+  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker,/host/root/.gnupg \
   --timeout 30m \
   --output "${REPORT_DIR}/trivy.json" \
   2> "${REPORT_DIR}/trivy.stderr.log" \
@@ -37,9 +34,6 @@ if [ ! -s "${REPORT_DIR}/trivy.json" ]; then
 fi
 
 # ── 2. debsecan — Debian-tracker cross-check against the real dpkg status file ──
-# NOTE: debsecan's default feed is Debian's security tracker. On Ubuntu hosts
-# this is a best-effort cross-check, not authoritative — Trivy is the primary
-# source of truth here since its DB properly covers Ubuntu's own patch levels.
 echo "[run_scan] running debsecan (best-effort)..."
 if [ -f /host/var/lib/dpkg/status ]; then
   debsecan --status-file /host/var/lib/dpkg/status --format detail \
@@ -49,24 +43,42 @@ else
   echo "no dpkg status file found — not a Debian/Ubuntu host, skipping" > "${REPORT_DIR}/debsecan.txt"
 fi
 
-# ── 3. Config hardening checks — SSH + nginx, against real host config files ──
+# ── 3. Config hardening checks — SSH + nginx + Docker, against real host config files ──
 echo "[run_scan] running config checks..."
 /app/scripts/checks/ssh_checks.sh /host > "${REPORT_DIR}/ssh_checks.json"
 /app/scripts/checks/nginx_checks.sh /host > "${REPORT_DIR}/nginx_checks.json"
+/app/scripts/docker_checks.sh "${REPORT_DIR}/docker_checks.json"
+
+# ── 3.1 Host Hardening (Lynis) ──
+echo "[run_scan] running lynis..."
+# Run lynis in non-privileged mode as best effort.
+lynis audit system --quick --pentest --logfile "${REPORT_DIR}/lynis.log" --report-file "${REPORT_DIR}/lynis-report.dat" > /dev/null 2>&1 || true
+
+# ── 3.2 Network Exposure / Firewall ──
+echo "[run_scan] gathering network exposure and firewall data..."
+ss -tlnp > "${REPORT_DIR}/ss_listeners.txt" 2>/dev/null || ss -tln > "${REPORT_DIR}/ss_listeners.txt"
+ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo "ufw not found or insufficient permissions" > "${REPORT_DIR}/ufw_status.txt"
+iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
+nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
 
 # ── 4. nmap — self-scan of THIS host's real listening ports (needs network_mode: host,
 #    see docker-compose.yml for the documented trade-off). Safe script categories by
 #    default; dos/exploit/brute/fuzzer only if NMAP_ALLOW_INTRUSIVE=true. ──
 if [ "${NMAP_SELF_SCAN:-true}" = "true" ]; then
-  NMAP_CATEGORIES="${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe,vuln,auth}"
+  # No 'vuln' category — it's banner-grabbing CVE matching, a known source of
+  # false positives on distro-packaged software. Trivy already does evidence-based
+  # CVE detection from the package DB. We use behavioral probes instead.
+  NMAP_CATEGORIES="${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe}"
+  NMAP_EXTRA="${NMAP_EXTRA_SCRIPTS:-ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods}"
+  NMAP_ALL="${NMAP_CATEGORIES},${NMAP_EXTRA}"
   if [ "${NMAP_ALLOW_INTRUSIVE:-false}" = "true" ]; then
     echo "[run_scan] ⚠️ NMAP_ALLOW_INTRUSIVE=true — including exploit,dos,brute,fuzzer scripts"
     echo "[run_scan] ⚠️ this WILL actively attack services on this host, confirm maintenance window"
-    NMAP_CATEGORIES="${NMAP_CATEGORIES},exploit,dos,brute,fuzzer"
+    NMAP_ALL="${NMAP_ALL},exploit,dos,brute,fuzzer"
   fi
-  echo "[run_scan] running nmap self-scan (categories: ${NMAP_CATEGORIES})..."
+  echo "[run_scan] running nmap self-scan (categories: ${NMAP_ALL})..."
   nmap -sV -sC \
-    --script "${NMAP_CATEGORIES}" \
+    --script "${NMAP_ALL}" \
     -p- \
     --max-retries 2 \
     --host-timeout 20m \
@@ -79,6 +91,26 @@ if [ "${NMAP_SELF_SCAN:-true}" = "true" ]; then
   # Validate nmap output is non-empty
   if [ ! -s "${REPORT_DIR}/nmap.xml" ]; then
     echo "[run_scan] ⚠️ ERROR: nmap.xml is empty — nmap scan failed"
+  else
+    # ── 4.1 testssl.sh on discovered TLS ports ──
+    echo "[run_scan] extracting TLS ports for testssl.sh..."
+    TLS_PORTS=$(python3 -c '
+import xml.etree.ElementTree as ET, sys
+try:
+    for p in ET.parse(sys.argv[1]).findall(".//port"):
+        if p.find("state").get("state") == "open":
+            svc = p.find("service")
+            if svc is not None and (svc.get("tunnel") == "ssl" or "ssl" in svc.get("name", "")):
+                print(p.get("portid"))
+except:
+    pass
+' "${REPORT_DIR}/nmap.xml")
+
+    for port in $TLS_PORTS; do
+      echo "[run_scan] running testssl.sh on port $port..."
+      # Use JSON output, ignore the testssl.sh warnings about being run as root if applicable, use --quiet to limit stdout spam
+      testssl.sh --quiet --jsonfile "${REPORT_DIR}/testssl_${port}.json" "localhost:${port}" >/dev/null 2>&1 || true
+    done
   fi
 else
   echo "[run_scan] NMAP_SELF_SCAN=false, skipping port scan"
@@ -90,7 +122,8 @@ jq -n \
   --arg ts "${TS}" \
   --slurpfile ssh "${REPORT_DIR}/ssh_checks.json" \
   --slurpfile nginx "${REPORT_DIR}/nginx_checks.json" \
-  '{host: $host, scanned_at: $ts, ssh_checks: $ssh[0], nginx_checks: $nginx[0]}' \
+  --slurpfile docker "${REPORT_DIR}/docker_checks.json" \
+  '{host: $host, scanned_at: $ts, ssh_checks: $ssh[0], nginx_checks: $nginx[0], docker_checks: $docker[0]}' \
   > "${REPORT_DIR}/combined_meta.json"
 
 echo "[run_scan] raw reports written to ${REPORT_DIR}"

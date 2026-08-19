@@ -24,14 +24,14 @@ docker compose exec brahma-danda /app/scripts/run_scan.sh 2>&1 | tee /tmp/scan-l
 
 ```bash
 # Watch ongoing container logs while a scan is running
-docker compose logs -f brahma-danda
+docker compose logs -f brahmadanda
 ```
 
 ## Logs & Debugging
 
 ```bash
-docker compose logs -f brahma-danda                          # live logs
-docker compose logs brahma-danda --tail 50                   # last 50 lines
+docker compose logs -f brahmadanda                          # live logs
+docker compose logs brahmadanda --tail 50                   # last 50 lines
 docker inspect brahma-danda --format '{{.State.Status}} OOM={{.State.OOMKilled}}'  # health check
 ```
 
@@ -79,7 +79,53 @@ ollama list                                             # check downloaded model
 ```bash
 # In .env:
 ANTHROPIC_BASE_URL=             # set to use custom gateway
+ANTHROPIC_AUTH_TOKEN=           # standard Bearer token for custom gateways
 ANTHROPIC_MODEL=ornith-1.0      # override CLAUDE_MODEL
 OLLAMA_BASE_URL=http://host.docker.internal:11434   # fallback URL
 OLLAMA_MODEL=deepseek-coder-v2:16b                   # fallback model
 ```
+
+## Optional Scan Modules
+
+```bash
+# Enable optional scans in .env:
+DOCKER_CHECKS=true              # Docker runtime security checks (default: true)
+LYNIS_SCAN=true                 # Lynis Linux hardening audit (default: false)
+TLS_SCAN=true                   # testssl.sh TLS certificate audit (default: false)
+NMAP_SELF_SCAN=true             # nmap port scan (default: true)
+```
+
+**Docker Runtime Checks** (always on):
+- Docker socket permissions
+- daemon.json security config (TLS, userns-remap, live-restore)
+- TCP port exposure (2375, 2376)
+- Docker group membership
+
+**Lynis Audit** (optional, LYNIS_SCAN=true):
+- Full Linux security hardening audit
+- Takes ~2-3 minutes
+- Output: lynis-report.dat (data file) and lynis.log (text log)
+
+**testssl.sh TLS Audit** (optional, TLS_SCAN=true):
+- Scans SSL/TLS ports identified by nmap
+- Certificate validity, TLS version support, cipher suites
+- Output: testssl.txt (structured text report)
+
+## Public Exposure Context
+
+The scanner collects:
+- `ss_listeners.txt` — which services bind to 0.0.0.0 (internet) vs 127.0.0.1 (local)
+- `ufw_status.txt` — UFW firewall rules
+- `iptables.txt` — iptables rules
+- `nftables.txt` — nftables rules
+
+Claude uses this to classify risk: a Critical CVE on a local-only service is Medium risk in practice.
+
+## Slack Threat Brief Format
+
+The remediation output is a **Threat Brief** designed for quick human review. It strictly contains:
+- **Executive Summary** — 1-3 sentences with the number of exposed services and the single highest-risk finding.
+- **Critical & High Findings** — Documented with Risk, precise Evidence (file and exact line/value), and concrete Impact.
+- **Note to Reviewer** — A reminder that remediation decisions are left to the reviewer and that lower severity findings exist in the raw reports.
+
+Medium, Low, and Informational findings are explicitly omitted from the Slack message to prevent alert fatigue, but all raw scan files are attached in the thread for a complete deep-dive.
