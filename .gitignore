@@ -1,3 +1,4 @@
 .env
 secrets/*.txt
-reports/ 
+reports/
+best/
