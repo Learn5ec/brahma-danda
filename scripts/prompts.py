@@ -38,6 +38,14 @@ Return ONLY a JSON object — no prose, no markdown fences:
   "evidence": {"file": "<filename>", "location": "<line/field/key>", "value": "<exact value>"},
   "impact": "<concrete consequence if unaddressed>"}]}
 
+File-specific guidance:
+- ssh_checks.json / nginx_checks.json / docker_checks.json: extract pass/fail items at Critical/High severity.
+- trivy.json / debsecan.txt: extract CVEs at CRITICAL/HIGH severity (trivy is authoritative).
+- ss_listeners.txt: flag services bound to 0.0.0.0, [::], or public IPs without firewall protection.
+- ufw_status.txt / iptables.txt / nftables.txt: flag missing deny rules, open ports without rules, or permissive policies.
+- lynis-report.dat: extract items marked [WARNING], [TIP], or [FAILED].
+- nmap.xml / nmap.txt: extract vulnerable services, open ports with risky scripts, or misconfigurations.
+
 Rules:
 - Include only Critical and High findings. Omit Medium, Low, and Informational.
 - Evaluate both internet-facing AND internal/local services. If an internal service is vulnerable, extract it.
