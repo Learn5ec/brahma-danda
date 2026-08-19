@@ -234,24 +234,28 @@ NFTables:
 
 
 def _make_anthropic_client():
-    """Return (client, model) from env/secrets."""
-    base_url = os.environ.get("ANTHROPIC_BASE_URL")
-    api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN")
-    
-    # Track if we're using a Bearer token rather than a native Anthropic key
-    is_bearer_token = bool(api_key)
-    if not api_key:
-        api_key = read_secret("claude_api_key")
+    """Return (client, model) or (None, '') if Anthropic is not configured."""
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "").strip()
+    api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN", "").strip()
 
-    model = os.environ.get("ANTHROPIC_MODEL") or os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
-    
-    kwargs = {"api_key": api_key}
+    # If neither a gateway URL nor a bearer token is set, check for the secret
+    # file. If that's also missing, skip Claude entirely — Ollama will be used.
+    if not base_url and not api_key:
+        secret_path = Path("/run/secrets/claude_api_key")
+        if not secret_path.exists():
+            print("[remediate] No Anthropic config found — skipping Claude, will use Ollama")
+            return None, ""
+        api_key = secret_path.read_text().strip()
+
+    is_bearer_token = bool(os.environ.get("ANTHROPIC_AUTH_TOKEN", "").strip())
+    model = (os.environ.get("ANTHROPIC_MODEL", "").strip()
+             or os.environ.get("CLAUDE_MODEL", "").strip()
+             or "claude-sonnet-5")
+
+    kwargs: dict = {"api_key": api_key}
     if base_url:
         kwargs["base_url"] = base_url
         print(f"[remediate] using custom Anthropic gateway: {base_url}")
-        
-        # Third-party gateways often expect standard Bearer auth instead of
-        # Anthropic's proprietary x-api-key header.
         if is_bearer_token:
             kwargs["default_headers"] = {"Authorization": f"Bearer {api_key}"}
 
@@ -290,17 +294,17 @@ def call_ollama(model: str, base_url: str, system: str, user_prompt: str,
 
 def _llm(system: str, user: str, *, client=None, model: str = "",
          ollama_url: str = "", ollama_model: str = "", max_tokens: int = 2048) -> str | None:
-    """Try Claude then Ollama; return None if both fail."""
-    if client:
-        try:
-            return call_claude(client, model, system, user, max_tokens)
-        except Exception as e:
-            print(f"[remediate] Claude failed: {e}")
+    """Try Ollama then Claude; return None if both fail."""
     if ollama_url and ollama_model:
         try:
             return call_ollama(ollama_model, ollama_url, system, user, max_tokens)
         except Exception as e:
             print(f"[remediate] Ollama failed: {e}")
+    if client:
+        try:
+            return call_claude(client, model, system, user, max_tokens)
+        except Exception as e:
+            print(f"[remediate] Claude failed: {e}")
     return None
 
 
