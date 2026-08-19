@@ -23,5 +23,9 @@ if [ "${RUN_ON_STARTUP:-true}" = "true" ]; then
   fi
 fi
 
-echo "[entrypoint] handing off to supercronic for scheduled monthly runs"
-exec supercronic "${RENDERED_CRON}"
+echo "[entrypoint] handing off to cron daemon for scheduled runs"
+# Install rendered crontab and start cron in background, then exec to keep container alive
+crontab "${RENDERED_CRON}"
+cron
+echo "[entrypoint] cron started, keeping container alive"
+wait
