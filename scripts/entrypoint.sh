@@ -10,11 +10,17 @@ echo "[entrypoint] schedule: ${SCAN_SCHEDULE_CRON}"
 RENDERED_CRON="/tmp/crontab"
 sed "s|__SCHEDULE__|${SCAN_SCHEDULE_CRON}|" /app/crontab > "${RENDERED_CRON}"
 
-# Run once immediately on first start so DevOps gets a Slack message right
-# away to confirm the deployment worked, instead of waiting a month.
+# First-boot detection: only run initial scan if no previous runs exist
 if [ "${RUN_ON_STARTUP:-true}" = "true" ]; then
-  echo "[entrypoint] running initial scan now (set RUN_ON_STARTUP=false to skip)"
-  /app/scripts/run_scan.sh || echo "[entrypoint] initial scan failed — check /app/reports/last_run.log"
+  FIRST_BOOT_MARKER="/app/reports/.first_boot_marker"
+  if [ ! -f "${FIRST_BOOT_MARKER}" ]; then
+    echo "[entrypoint] first boot detected — running initial scan"
+    /app/scripts/run_scan.sh || echo "[entrypoint] initial scan failed — check /app/reports/last_run.log"
+    # Create marker so subsequent restarts don't re-trigger
+    touch "${FIRST_BOOT_MARKER}"
+  else
+    echo "[entrypoint] previous boot detected (marker exists) — skipping startup scan"
+  fi
 fi
 
 echo "[entrypoint] handing off to supercronic for scheduled monthly runs"
