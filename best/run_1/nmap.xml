@@ -1,0 +1,1089 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.93 scan initiated Tue Aug 18 14:39:02 2026 as: nmap -sV -sC -&#45;script default,discovery,safe,auth,version,ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods -p- -&#45;max-retries 2 -&#45;host-timeout 20m -oX /app/reports/2026-08-18T143827Z/nmap.xml -oN /app/reports/2026-08-18T143827Z/nmap.txt localhost -->
+<nmaprun scanner="nmap" args="nmap -sV -sC -&#45;script default,discovery,safe,auth,version,ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods -p- -&#45;max-retries 2 -&#45;host-timeout 20m -oX /app/reports/2026-08-18T143827Z/nmap.xml -oN /app/reports/2026-08-18T143827Z/nmap.txt localhost" start="1787063942" startstr="Tue Aug 18 14:39:02 2026" version="7.93" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<prescript><script id="ipv6-multicast-mld-list" output="&#xa;  fe80::f6b7:43c7:c2ce:f716: &#xa;    device: enp2s0&#xa;    mac: 18c04d69e437&#xa;    multicast_ips: &#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ffba:a510         (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ffb9:2529         (Solicited-Node Address)&#xa;      ff02::1:ffb9:2529         (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ffce:f716         (NDP Solicited-node)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffce:f716         (NDP Solicited-node)&#xa;  fe80::3e7c:3fff:fe17:b354: &#xa;    device: enp2s0&#xa;    mac: 3c7c3f17b354&#xa;    multicast_ips: &#xa;      ff02::1:ff00:0            (Solicited-Node Address)&#xa;      ff02::2                   (All Routers Address)&#xa;      ff02::2                   (All Routers Address)&#xa;      ff05::2                   (unknown)&#xa;      ff02::1:ff17:b354         (NDP Solicited-node)&#xa;      ff02::6a                  (All-Snoopers)&#xa;      ff05::2                   (unknown)&#xa;  fe80::2948:fcf:2671:ad9f: &#xa;    device: enp2s0&#xa;    mac: e848b8c81eae&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff0c:e9a4         (Solicited-Node Address)&#xa;      ff02::1:ff04:cb69         (Solicited-Node Address)&#xa;      ff02::1:ff71:ad9f         (NDP Solicited-node)&#xa;  fe80::5083:dcbf:27bc:f23f: &#xa;    device: enp2s0&#xa;    mac: d4548be22435&#xa;    multicast_ips: &#xa;      ff02::1:ffbc:f23f         (NDP Solicited-node)&#xa;      ff02::1:ffbc:f23f         (NDP Solicited-node)&#xa;  fe80::7aea:c7f1:6ad2:1fce: &#xa;    device: enp2s0&#xa;    mac: 90de80d81334&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff88:fa0b         (Solicited-Node Address)&#xa;      ff02::1:fffc:3ebb         (Solicited-Node Address)&#xa;      ff02::1:ffd2:1fce         (NDP Solicited-node)&#xa;      ff02::1:ff88:fa0b         (Solicited-Node Address)&#xa;      ff02::1:fffc:3ebb         (Solicited-Node Address)&#xa;      ff02::1:ffd2:1fce         (NDP Solicited-node)&#xa;  fe80::76c1:1686:6a12:d678: &#xa;    device: enp2s0&#xa;    mac: fc6d777b3a3b&#xa;    multicast_ips: &#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ff6a:9089         (Solicited-Node Address)&#xa;      ff02::1:ff6a:9089         (Solicited-Node Address)&#xa;      ff02::1:ff12:d678         (NDP Solicited-node)&#xa;      ff02::1:ff4b:f1de         (Solicited-Node Address)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff12:d678         (NDP Solicited-node)&#xa;  fe80::c1dd:c8cc:f938:b177: &#xa;    device: enp2s0&#xa;    mac: 8c902dcbd9ab&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffcc:47c2         (Solicited-Node Address)&#xa;      ff02::1:ff25:4498         (Solicited-Node Address)&#xa;      ff02::1:ff38:b177         (NDP Solicited-node)&#xa;  fe80::14ff:5f5a:32f0:806c: &#xa;    device: enp2s0&#xa;    mac: 149877301e85&#xa;    multicast_ips: &#xa;      ff02::2:ffce:c9f5         (Node Information Queries)&#xa;      ff02::1:fff0:806c         (NDP Solicited-node)&#xa;  fe80::be24:11ff:fe1b:95de: &#xa;    device: enp2s0&#xa;    mac: bc24111b95de&#xa;    multicast_ips: &#xa;      ff02::1:ff1b:95de         (NDP Solicited-node)&#xa;  fe80::c739:26f2:eef1:205c: &#xa;    device: enp2s0&#xa;    mac: 202351c367b3&#xa;    multicast_ips: &#xa;      ff02::1:ff75:228          (Solicited-Node Address)&#xa;      ff02::1:fff1:205c         (NDP Solicited-node)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffc6:ec10         (Solicited-Node Address)&#xa;      ff02::1:ff75:228          (Solicited-Node Address)&#xa;  fe80::19d7:f3fb:b719:ba72: &#xa;    device: enp2s0&#xa;    mac: 90de80d7f275&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff90:2531         (Solicited-Node Address)&#xa;      ff02::1:ff19:48d7         (Solicited-Node Address)&#xa;      ff02::1:ff19:ba72         (NDP Solicited-node)&#xa;  fe80::3511:f5e1:95ea:a5ba: &#xa;    device: enp2s0&#xa;    mac: bc389837d863&#xa;    multicast_ips: &#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ffea:a5ba         (NDP Solicited-node)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffea:a5ba         (NDP Solicited-node)&#xa;  fe80::692:da31:5427:bca4: &#xa;    device: enp2s0&#xa;    mac: 90de80d80321&#xa;    multicast_ips: &#xa;      ff02::1:ff0d:8f1a         (Solicited-Node Address)&#xa;      ff02::1:ff27:bca4         (NDP Solicited-node)&#xa;      ff02::1:ff0d:8f1a         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffd7:fcf1         (Solicited-Node Address)&#xa;      ff02::1:ffd7:fcf1         (Solicited-Node Address)&#xa;  fe80::1ac0:4dff:fe9c:6fcb: &#xa;    device: enp2s0&#xa;    mac: 18c04d9c6fcb&#xa;    multicast_ips: &#xa;      ff02::1:ff9e:850          (Solicited-Node Address)&#xa;      ff12::8384                (unknown)&#xa;      ff02::1:ff9c:6fcb         (NDP Solicited-node)&#xa;      ff02::c                   (SSDP)&#xa;      ff12::8384                (unknown)&#xa;  fe80::90a5:ce63:9f06:c2e2: &#xa;    device: enp2s0&#xa;    mac: ac74b1f2fd9b&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;  fe80::e9e6:e63b:89ca:7598: &#xa;    device: enp2s0&#xa;    mac: 103d1ca1349d&#xa;    multicast_ips: &#xa;      ff02::1:ff9d:3a6          (Solicited-Node Address)&#xa;      ff02::1:ffa8:b866         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffca:7598         (NDP Solicited-node)&#xa;  fe80::1003:9564:5a4d:a0a6: &#xa;    device: enp2s0&#xa;    mac: 149877580761&#xa;    multicast_ips: &#xa;      ff02::1:ffed:1ded         (Solicited-Node Address)&#xa;      ff02::2:ffb0:5837         (Node Information Queries)&#xa;      ff02::1:ff4d:a0a6         (NDP Solicited-node)&#xa;      ff02::2:ffb0:5837         (Node Information Queries)&#xa;  fe80::1eb8:17f6:4d49:353c: &#xa;    device: enp2s0&#xa;    mac: 6cd1995b3605&#xa;    multicast_ips: &#xa;      ff02::1:ff49:353c         (NDP Solicited-node)&#xa;  fe80::262:5bb4:c92a:f156: &#xa;    device: enp2s0&#xa;    mac: 3c7c3f0e6aad&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff2a:f156         (NDP Solicited-node)&#xa;      ff02::1:ffc6:897c         (Solicited-Node Address)&#xa;      ff02::1:ffc6:897c         (Solicited-Node Address)&#xa;      ff02::1:ffb9:e12e         (Solicited-Node Address)&#xa;      ff02::1:ffb9:e12e         (Solicited-Node Address)&#xa;  fe80::9fbd:af8c:71cf:c31e: &#xa;    device: enp2s0&#xa;    mac: fc6d777c8e40&#xa;    multicast_ips: &#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffcf:c31e         (NDP Solicited-node)&#xa;  fe80::729d:4ea5:3e31:cf2e: &#xa;    device: enp2s0&#xa;    mac: 5414f35153ab&#xa;    multicast_ips: &#xa;      ff02::1:ffea:ffc9         (Solicited-Node Address)&#xa;      ff02::1:ff9e:d681         (Solicited-Node Address)&#xa;      ff02::1:ffea:ffc9         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ff31:cf2e         (NDP Solicited-node)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff9e:d681         (Solicited-Node Address)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ff9e:d681         (Solicited-Node Address)&#xa;  fe80::be24:11ff:fea5:8107: &#xa;    device: enp2s0&#xa;    mac: bc2411a58107&#xa;    multicast_ips: &#xa;      ff02::1:ffa5:8107         (NDP Solicited-node)&#xa;      ff02::1:ffa5:8107         (NDP Solicited-node)&#xa;  fe80::a94b:6e82:19fb:ab73: &#xa;    device: enp2s0&#xa;    mac: fc6d777c8e2c&#xa;    multicast_ips: &#xa;      ff02::1:ff85:b783         (Solicited-Node Address)&#xa;      ff02::1:ff85:b783         (Solicited-Node Address)&#xa;      ff02::1:fffb:ab73         (NDP Solicited-node)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff2e:e765         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ff2e:e765         (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;  fe80::fa38:61d6:dbe5:57c3: &#xa;    device: enp2s0&#xa;    mac: fc6d777c8e7c&#xa;    multicast_ips: &#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff79:f941         (Solicited-Node Address)&#xa;      ff02::1:ffc9:4            (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ffe5:57c3         (NDP Solicited-node)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffe5:57c3         (NDP Solicited-node)&#xa;  fe80::ca4f:86ff:fea6:4890: &#xa;    device: enp2s0&#xa;    mac: c84f86a64890&#xa;    multicast_ips: &#xa;      ff02::1:ff00:0            (Solicited-Node Address)&#xa;      ff02::1:ffa6:4890         (NDP Solicited-node)&#xa;      ff05::2                   (unknown)&#xa;      ff02::1:ff00:0            (Solicited-Node Address)&#xa;      ff02::2                   (All Routers Address)&#xa;      ff02::1:ffa6:4890         (NDP Solicited-node)&#xa;      ff05::2                   (unknown)&#xa;      ff02::2                   (All Routers Address)&#xa;  fe80::c239:5aff:fe44:283a: &#xa;    device: enp2s0&#xa;    mac: c0395a44283a&#xa;    multicast_ips: &#xa;      ff02::1:ff44:283a         (NDP Solicited-node)&#xa;      ff02::1:ff44:283a         (NDP Solicited-node)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::c                   (SSDP)&#xa;  fe80::1227:f5ff:fe78:fef4: &#xa;    device: enp2s0&#xa;    mac: 1027f578fef4&#xa;    multicast_ips: &#xa;      ff02::1:ff00:0            (Solicited-Node Address)&#xa;      ff02::1:ff78:fef4         (NDP Solicited-node)&#xa;      ff02::2                   (All Routers Address)&#xa;  fe80::54ae:e4d1:f19f:b9d6: &#xa;    device: enp2s0&#xa;    mac: 9843fa73cfc1&#xa;    multicast_ips: &#xa;      ff02::1:ff72:4416         (Solicited-Node Address)&#xa;      ff02::1:ff9f:b9d6         (NDP Solicited-node)&#xa;      ff02::1:ffa1:de99         (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff72:4416         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ffa1:de99         (Solicited-Node Address)&#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ff9f:b9d6         (NDP Solicited-node)&#xa;  fe80::1348:efb3:4d56:cbba: &#xa;    device: enp2s0&#xa;    mac: 8c902dcbd8c0&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ffec:82b1         (Solicited-Node Address)&#xa;      ff02::1:ff43:2adb         (Solicited-Node Address)&#xa;      ff02::1:ff56:cbba         (NDP Solicited-node)&#xa;  fe80::6f76:6f77:a33f:c981: &#xa;    device: enp2s0&#xa;    mac: 8c902dcbd37c&#xa;    multicast_ips: &#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff53:b274         (Solicited-Node Address)&#xa;      ff02::1:ffbc:7d16         (Solicited-Node Address)&#xa;      ff02::1:ff3f:c981         (NDP Solicited-node)&#xa;  fe80::f25e:9b5a:956b:63a7: &#xa;    device: enp2s0&#xa;    mac: e0d55e35ab9c&#xa;    multicast_ips: &#xa;      ff02::1:ff1d:29dc         (Solicited-Node Address)&#xa;      ff02::1:ff6b:63a7         (NDP Solicited-node)&#xa;      ff02::1:ff42:c166         (Solicited-Node Address)&#xa;      ff02::1:ff42:c166         (Solicited-Node Address)&#xa;  fe80::1859:704e:1d25:2d43: &#xa;    device: enp2s0&#xa;    mac: fe648b30a8b0&#xa;    multicast_ips: &#xa;      ff02::1:ff25:2d43         (NDP Solicited-node)&#xa;      ff02::2:ff28:9cef         (Node Information Queries)&#xa;  fe80::54de:2936:eadb:4395: &#xa;    device: enp2s0&#xa;    mac: 8c902dcbd0aa&#xa;    multicast_ips: &#xa;      ff02::c                   (SSDP)&#xa;      ff02::1:ffdb:4395         (NDP Solicited-node)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff0e:966a         (Solicited-Node Address)&#xa;      ff02::1:ff2f:aa18         (Solicited-Node Address)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;      ff02::1:ff0e:966a         (Solicited-Node Address)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:3                 (Link-local Multicast Name Resolution)&#xa;  fe80::446b:abbc:87b9:d4c1: &#xa;    device: enp2s0&#xa;    mac: 8c902dcbca87&#xa;    multicast_ips: &#xa;      ff02::1:ff18:ab65         (Solicited-Node Address)&#xa;      ff02::1:ffb9:d4c1         (NDP Solicited-node)&#xa;      ff02::fb                  (mDNSv6)&#xa;      ff02::1:ff7a:3b85         (Solicited-Node Address)&#xa;      ff02::1:ffb9:d4c1         (NDP Solicited-node)&#xa;  fe80::9ea2:f4ff:fe26:7970: &#xa;    device: enp2s0&#xa;    mac: 9ca2f4267970&#xa;    multicast_ips: &#xa;      ff02::2                   (All Routers Address)&#xa;      ff02::1:ff26:7970         (NDP Solicited-node)&#xa;      ff05::2                   (unknown)&#xa;      ff02::1:ff00:0            (Solicited-Node Address)"><table key="fe80::f6b7:43c7:c2ce:f716">
+<elem key="device">enp2s0</elem>
+<elem key="mac">18c04d69e437</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffba:a510</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffb9:2529</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffb9:2529</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffce:f716</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffce:f716</elem>
+</table>
+</table>
+</table>
+<table key="fe80::3e7c:3fff:fe17:b354">
+<elem key="device">enp2s0</elem>
+<elem key="mac">3c7c3f17b354</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff00:0</elem>
+</table>
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff05::2</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff17:b354</elem>
+</table>
+<table>
+<elem key="description">All-Snoopers</elem>
+<elem key="ip">ff02::6a</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff05::2</elem>
+</table>
+</table>
+</table>
+<table key="fe80::2948:fcf:2671:ad9f">
+<elem key="device">enp2s0</elem>
+<elem key="mac">e848b8c81eae</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff0c:e9a4</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff04:cb69</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff71:ad9f</elem>
+</table>
+</table>
+</table>
+<table key="fe80::5083:dcbf:27bc:f23f">
+<elem key="device">enp2s0</elem>
+<elem key="mac">d4548be22435</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffbc:f23f</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffbc:f23f</elem>
+</table>
+</table>
+</table>
+<table key="fe80::7aea:c7f1:6ad2:1fce">
+<elem key="device">enp2s0</elem>
+<elem key="mac">90de80d81334</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff88:fa0b</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:fffc:3ebb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffd2:1fce</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff88:fa0b</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:fffc:3ebb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffd2:1fce</elem>
+</table>
+</table>
+</table>
+<table key="fe80::76c1:1686:6a12:d678">
+<elem key="device">enp2s0</elem>
+<elem key="mac">fc6d777b3a3b</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff6a:9089</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff6a:9089</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff12:d678</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff4b:f1de</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff12:d678</elem>
+</table>
+</table>
+</table>
+<table key="fe80::c1dd:c8cc:f938:b177">
+<elem key="device">enp2s0</elem>
+<elem key="mac">8c902dcbd9ab</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffcc:47c2</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff25:4498</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff38:b177</elem>
+</table>
+</table>
+</table>
+<table key="fe80::14ff:5f5a:32f0:806c">
+<elem key="device">enp2s0</elem>
+<elem key="mac">149877301e85</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Node Information Queries</elem>
+<elem key="ip">ff02::2:ffce:c9f5</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:fff0:806c</elem>
+</table>
+</table>
+</table>
+<table key="fe80::be24:11ff:fe1b:95de">
+<elem key="device">enp2s0</elem>
+<elem key="mac">bc24111b95de</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff1b:95de</elem>
+</table>
+</table>
+</table>
+<table key="fe80::c739:26f2:eef1:205c">
+<elem key="device">enp2s0</elem>
+<elem key="mac">202351c367b3</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff75:228</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:fff1:205c</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffc6:ec10</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff75:228</elem>
+</table>
+</table>
+</table>
+<table key="fe80::19d7:f3fb:b719:ba72">
+<elem key="device">enp2s0</elem>
+<elem key="mac">90de80d7f275</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff90:2531</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff19:48d7</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff19:ba72</elem>
+</table>
+</table>
+</table>
+<table key="fe80::3511:f5e1:95ea:a5ba">
+<elem key="device">enp2s0</elem>
+<elem key="mac">bc389837d863</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffea:a5ba</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffea:a5ba</elem>
+</table>
+</table>
+</table>
+<table key="fe80::692:da31:5427:bca4">
+<elem key="device">enp2s0</elem>
+<elem key="mac">90de80d80321</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff0d:8f1a</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff27:bca4</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff0d:8f1a</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffd7:fcf1</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffd7:fcf1</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1ac0:4dff:fe9c:6fcb">
+<elem key="device">enp2s0</elem>
+<elem key="mac">18c04d9c6fcb</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff9e:850</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff12::8384</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff9c:6fcb</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff12::8384</elem>
+</table>
+</table>
+</table>
+<table key="fe80::90a5:ce63:9f06:c2e2">
+<elem key="device">enp2s0</elem>
+<elem key="mac">ac74b1f2fd9b</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+</table>
+</table>
+<table key="fe80::e9e6:e63b:89ca:7598">
+<elem key="device">enp2s0</elem>
+<elem key="mac">103d1ca1349d</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff9d:3a6</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffa8:b866</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffca:7598</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1003:9564:5a4d:a0a6">
+<elem key="device">enp2s0</elem>
+<elem key="mac">149877580761</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffed:1ded</elem>
+</table>
+<table>
+<elem key="description">Node Information Queries</elem>
+<elem key="ip">ff02::2:ffb0:5837</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff4d:a0a6</elem>
+</table>
+<table>
+<elem key="description">Node Information Queries</elem>
+<elem key="ip">ff02::2:ffb0:5837</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1eb8:17f6:4d49:353c">
+<elem key="device">enp2s0</elem>
+<elem key="mac">6cd1995b3605</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff49:353c</elem>
+</table>
+</table>
+</table>
+<table key="fe80::262:5bb4:c92a:f156">
+<elem key="device">enp2s0</elem>
+<elem key="mac">3c7c3f0e6aad</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff2a:f156</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffc6:897c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffc6:897c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffb9:e12e</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffb9:e12e</elem>
+</table>
+</table>
+</table>
+<table key="fe80::9fbd:af8c:71cf:c31e">
+<elem key="device">enp2s0</elem>
+<elem key="mac">fc6d777c8e40</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffcf:c31e</elem>
+</table>
+</table>
+</table>
+<table key="fe80::729d:4ea5:3e31:cf2e">
+<elem key="device">enp2s0</elem>
+<elem key="mac">5414f35153ab</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffea:ffc9</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff9e:d681</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffea:ffc9</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff31:cf2e</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff9e:d681</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff9e:d681</elem>
+</table>
+</table>
+</table>
+<table key="fe80::be24:11ff:fea5:8107">
+<elem key="device">enp2s0</elem>
+<elem key="mac">bc2411a58107</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffa5:8107</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffa5:8107</elem>
+</table>
+</table>
+</table>
+<table key="fe80::a94b:6e82:19fb:ab73">
+<elem key="device">enp2s0</elem>
+<elem key="mac">fc6d777c8e2c</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff85:b783</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff85:b783</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:fffb:ab73</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff2e:e765</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff2e:e765</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+</table>
+</table>
+<table key="fe80::fa38:61d6:dbe5:57c3">
+<elem key="device">enp2s0</elem>
+<elem key="mac">fc6d777c8e7c</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff79:f941</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffc9:4</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffe5:57c3</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffe5:57c3</elem>
+</table>
+</table>
+</table>
+<table key="fe80::ca4f:86ff:fea6:4890">
+<elem key="device">enp2s0</elem>
+<elem key="mac">c84f86a64890</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff00:0</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffa6:4890</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff05::2</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff00:0</elem>
+</table>
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffa6:4890</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff05::2</elem>
+</table>
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+</table>
+</table>
+<table key="fe80::c239:5aff:fe44:283a">
+<elem key="device">enp2s0</elem>
+<elem key="mac">c0395a44283a</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff44:283a</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff44:283a</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1227:f5ff:fe78:fef4">
+<elem key="device">enp2s0</elem>
+<elem key="mac">1027f578fef4</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff00:0</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff78:fef4</elem>
+</table>
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+</table>
+</table>
+<table key="fe80::54ae:e4d1:f19f:b9d6">
+<elem key="device">enp2s0</elem>
+<elem key="mac">9843fa73cfc1</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff72:4416</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff9f:b9d6</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffa1:de99</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff72:4416</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffa1:de99</elem>
+</table>
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff9f:b9d6</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1348:efb3:4d56:cbba">
+<elem key="device">enp2s0</elem>
+<elem key="mac">8c902dcbd8c0</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffec:82b1</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff43:2adb</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff56:cbba</elem>
+</table>
+</table>
+</table>
+<table key="fe80::6f76:6f77:a33f:c981">
+<elem key="device">enp2s0</elem>
+<elem key="mac">8c902dcbd37c</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff53:b274</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ffbc:7d16</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff3f:c981</elem>
+</table>
+</table>
+</table>
+<table key="fe80::f25e:9b5a:956b:63a7">
+<elem key="device">enp2s0</elem>
+<elem key="mac">e0d55e35ab9c</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff1d:29dc</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff6b:63a7</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff42:c166</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff42:c166</elem>
+</table>
+</table>
+</table>
+<table key="fe80::1859:704e:1d25:2d43">
+<elem key="device">enp2s0</elem>
+<elem key="mac">fe648b30a8b0</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff25:2d43</elem>
+</table>
+<table>
+<elem key="description">Node Information Queries</elem>
+<elem key="ip">ff02::2:ff28:9cef</elem>
+</table>
+</table>
+</table>
+<table key="fe80::54de:2936:eadb:4395">
+<elem key="device">enp2s0</elem>
+<elem key="mac">8c902dcbd0aa</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">SSDP</elem>
+<elem key="ip">ff02::c</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffdb:4395</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff0e:966a</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff2f:aa18</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff0e:966a</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Link-local Multicast Name Resolution</elem>
+<elem key="ip">ff02::1:3</elem>
+</table>
+</table>
+</table>
+<table key="fe80::446b:abbc:87b9:d4c1">
+<elem key="device">enp2s0</elem>
+<elem key="mac">8c902dcbca87</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff18:ab65</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffb9:d4c1</elem>
+</table>
+<table>
+<elem key="description">mDNSv6</elem>
+<elem key="ip">ff02::fb</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff7a:3b85</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ffb9:d4c1</elem>
+</table>
+</table>
+</table>
+<table key="fe80::9ea2:f4ff:fe26:7970">
+<elem key="device">enp2s0</elem>
+<elem key="mac">9ca2f4267970</elem>
+<table key="multicast_ips">
+<table>
+<elem key="description">All Routers Address</elem>
+<elem key="ip">ff02::2</elem>
+</table>
+<table>
+<elem key="description">NDP Solicited-node</elem>
+<elem key="ip">ff02::1:ff26:7970</elem>
+</table>
+<table>
+<elem key="description">unknown</elem>
+<elem key="ip">ff05::2</elem>
+</table>
+<table>
+<elem key="description">Solicited-Node Address</elem>
+<elem key="ip">ff02::1:ff00:0</elem>
+</table>
+</table>
+</table>
+</script><script id="hostmap-robtex" output="*TEMPORARILY DISABLED* due to changes in Robtex&apos;s API. See https://www.robtex.com/api/"/><script id="broadcast-dns-service-discovery" output="&#xa;  224.0.0.251&#xa;    22/tcp ssh&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    22/tcp sftp-ssh&#xa;      Address=192.168.7.40 fe80::1859:704e:1d25:2d43&#xa;    22/tcp ssh&#xa;      Address=192.168.7.148&#xa;    22/tcp sftp-ssh&#xa;      Address=192.168.7.148&#xa;    22/tcp ssh&#xa;      Address=192.168.7.40 fe80::1859:704e:1d25:2d43&#xa;    22/tcp sftp-ssh&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    445/tcp smb&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    445/tcp smb&#xa;      Address=192.168.7.20 fc89:4a20:ad6c::f2f0:b120:34cc:47c2&#xa;    3283/udp net-assistant&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    7000/tcp raop&#xa;      cn=0,1,2,3&#xa;      da=true&#xa;      et=0,3,5&#xa;      ft=0x4A7FCFD5,0x38174FDE&#xa;      Address=192.168.7.56 fe80::8b:1cc7:7dbc:fb6f&#xa;    7000/tcp airplay&#xa;      act=2&#xa;      acl=0&#xa;      deviceid=72:13:31:4A:9D:C7&#xa;      fex=1c9/St5PFzg2IYxA&#xa;      features=0x4A7FCFD5,0x38174FDE&#xa;      rsf=0x8&#xa;      flags=0x204&#xa;      gid=E729BA3D-FF37-4D81-BA4F-F92ABC32BD9C&#xa;      igl=0&#xa;      gcgl=0&#xa;      model=MacBookPro17,1&#xa;      at=4&#xa;      protovers=1.1&#xa;      pi=00000000-0000-0000-0000-28ea2d590605&#xa;      Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70&#xa;    7000/tcp raop&#xa;      cn=0,1,2,3&#xa;      da=true&#xa;      et=0,3,5&#xa;      ft=0x4A7FCFD5,0xB8174FDE&#xa;      Address=192.168.7.40 fe80::1859:704e:1d25:2d43&#xa;    7000/tcp raop&#xa;      cn=0,1,2,3&#xa;      da=true&#xa;      et=0,3,5&#xa;      ft=0x4A7FCFD5,0x38174FDE&#xa;      sf=0x204&#xa;      md=0,1,2&#xa;      Address=192.168.7.148&#xa;    7000/tcp airplay&#xa;      act=2&#xa;      acl=0&#xa;      deviceid=2A:CA:EC:B3:7F:1A&#xa;      fex=1c9/St5PFzg2IQw&#xa;      features=0x4A7FCFD5,0x38174FDE&#xa;      rsf=0x8&#xa;      flags=0x204&#xa;      gid=DE7F8114-A2F2-437B-8BB0-A77BC7F6F004&#xa;      igl=0&#xa;      gcgl=0&#xa;      model=Macmini9,1&#xa;      at=4&#xa;      protovers=1.1&#xa;      pi=6e7e1f71-d37d-4e5d-9c38-6e0ba9404173&#xa;      psi=29CAECB3-7F1A-4B9C-A06B-6C249BD800F4&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    7000/tcp airplay&#xa;      act=2&#xa;      acl=0&#xa;      deviceid=42:A2:AA:DE:0A:0F&#xa;      fex=1c9/St5PFzg2IYxA&#xa;      features=0x4A7FCFD5,0x38174FDE&#xa;      rsf=0x8&#xa;      flags=0x204&#xa;      gid=F0ED1E7B-38DC-4E41-AF28-BFFDE70C362D&#xa;      igl=0&#xa;      gcgl=0&#xa;      model=Mac14,3&#xa;      at=4&#xa;      protovers=1.1&#xa;      pi=088e1a09-c364-4189-88a6-c3b6780b2938&#xa;      Address=192.168.7.56 fe80::8b:1cc7:7dbc:fb6f&#xa;    7000/tcp airplay&#xa;      act=2&#xa;      acl=0&#xa;      deviceid=BE:06:BF:51:FD:8B&#xa;      fex=1c9/St5PFzg2IYxA&#xa;      features=0x4A7FCFD5,0x38174FDE&#xa;      rsf=0x8&#xa;      flags=0x204&#xa;      gid=0C1687A1-EDD4-450B-92A3-368B6885D2CE&#xa;      igl=0&#xa;      gcgl=0&#xa;      model=Mac14,9&#xa;      at=4&#xa;      protovers=1.1&#xa;      pi=957c5336-143a-416e-a037-972596962409&#xa;      psi=BD06BF51-FD8B-4E52-A98C-6CB07557B4C2&#xa;      Address=192.168.7.148&#xa;    7000/tcp airplay&#xa;      act=2&#xa;      acl=0&#xa;      deviceid=EE:F5:47:99:C0:33&#xa;      fex=1c9/St5PF7g2IQw&#xa;      features=0x4A7FCFD5,0xB8174FDE&#xa;      rsf=0x8&#xa;      flags=0x204&#xa;      gid=14231BA0-3512-451A-9F0E-A71F2E033B8D&#xa;      igl=0&#xa;      gcgl=0&#xa;      model=Macmini9,1&#xa;      at=4&#xa;      protovers=1.1&#xa;      pi=80adbba2-0635-4b08-aed3-2128e64c0ceb&#xa;      Address=192.168.7.40 fe80::1859:704e:1d25:2d43&#xa;    7000/tcp raop&#xa;      cn=0,1,2,3&#xa;      da=true&#xa;      et=0,3,5&#xa;      ft=0x4A7FCFD5,0x38174FDE&#xa;      sf=0x204&#xa;      md=0,1,2&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    7000/tcp raop&#xa;      cn=0,1,2,3&#xa;      da=true&#xa;      et=0,3,5&#xa;      ft=0x4A7FCFD5,0x38174FDE&#xa;      sf=0x204&#xa;      Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70&#xa;    32498/tcp apple-mobdev2&#xa;      Address=192.168.7.9 fe80::1883:c109:a874:2dc4&#xa;    49152/tcp companion-link&#xa;      rpMac=0&#xa;      rpHN=2276ddc16bf4&#xa;      Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c&#xa;    49152/tcp remotepairing&#xa;      Address=192.168.7.9 fe80::1883:c109:a874:2dc4&#xa;    52827/tcp companion-link&#xa;      Address=192.168.7.52 fe80::1003:9564:5a4d:a0a6&#xa;    53944/tcp companion-link&#xa;      Address=192.168.7.40 fe80::1859:704e:1d25:2d43&#xa;    55257/udp asquic&#xa;      Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70&#xa;    60020/tcp companion-link&#xa;      Address=192.168.7.146&#xa;    62570/tcp companion-link&#xa;      Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70&#xa;    64488/tcp companion-link&#xa;      Address=192.168.7.148&#xa;    Device Information&#xa;      Address=192.168.7.20 fc89:4a20:ad6c::f2f0:b120:34cc:47c2&#xa;"/><script id="eap-info" output="please specify an interface with -e"/><script id="targets-ipv6-multicast-echo" output="&#xa;  IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0&#xa;  IP: fe80::c5ba:afaa:cf1f:5627  MAC: 80b655cdb225  IFACE: enp2s0&#xa;  IP: fe80::262:5bb4:c92a:f156   MAC: 3c7c3f0e6aad  IFACE: enp2s0&#xa;  IP: fe80::1883:c109:a874:2dc4  MAC: 28ea2d53ce09  IFACE: enp2s0&#xa;  IP: fe80::3e7c:3fff:fe17:b354  MAC: 3c7c3f17b354  IFACE: enp2s0&#xa;  IP: fe80::19d7:f3fb:b719:ba72  MAC: 90de80d7f275  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0&#xa;  IP: fe80::1348:efb3:4d56:cbba  MAC: 8c902dcbd8c0  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0&#xa;  IP: fe80::2948:fcf:2671:ad9f   MAC: e848b8c81eae  IFACE: enp2s0&#xa;  IP: fe80::9ea2:f4ff:fe26:7970  MAC: 9ca2f4267970  IFACE: enp2s0&#xa;  IP: fe80::f25e:9b5a:956b:63a7  MAC: e0d55e35ab9c  IFACE: enp2s0&#xa;  IP: fe80::ca4f:86ff:fea6:4890  MAC: c84f86a64890  IFACE: enp2s0&#xa;  IP: fe80::1227:f5ff:fe78:fef4  MAC: 1027f578fef4  IFACE: enp2s0&#xa;  IP: fe80::c239:5aff:fe44:283a  MAC: c0395a44283a  IFACE: enp2s0&#xa;  IP: fe80::14ff:5f5a:32f0:806c  MAC: 149877301e85  IFACE: enp2s0&#xa;  IP: fe80::37c1:ec2e:4f47:546b  MAC: d09cae284ab7  IFACE: enp2s0&#xa;  IP: fe80::c1dd:c8cc:f938:b177  MAC: 8c902dcbd9ab  IFACE: enp2s0&#xa;  IP: fe80::c739:26f2:eef1:205c  MAC: 202351c367b3  IFACE: enp2s0&#xa;  IP: fe80::1859:704e:1d25:2d43  MAC: fe648b30a8b0  IFACE: enp2s0&#xa;  IP: fe80::1f:8eb6:aeab:2e70    MAC: 2ed29bedd4f9  IFACE: enp2s0&#xa;  IP: fe80::90a5:ce63:9f06:c2e2  MAC: ac74b1f2fd9b  IFACE: enp2s0&#xa;  IP: fe80::1003:9564:5a4d:a0a6  MAC: 149877580761  IFACE: enp2s0&#xa;  Use -&#45;script-args=newtargets to add the results as targets&#xa;"/><script id="broadcast-ping" output="&#xa;  IP: 192.168.7.45   MAC: 149877301e85&#xa;  IP: 192.168.7.9    MAC: 28ea2d53ce09&#xa;  IP: 192.168.7.11   MAC: 2ed29bedd4f9&#xa;  IP: 192.168.7.40   MAC: fe648b30a8b0&#xa;  IP: 192.168.7.52   MAC: 149877580761&#xa;  IP: 192.168.7.146  MAC: f84d898326b9&#xa;  IP: 192.168.7.148  MAC: 6c7e67c55de2&#xa;  Use -&#45;script-args=newtargets to add the results as targets&#xa;"/><script id="broadcast-wsdd-discover" output="&#xa;  Devices&#xa;    239.255.255.250&#xa;      Failed to decode response from device: &#xa;    239.255.255.250&#xa;        Message id: bf443e5a-a7c9-43bb-aeab-9cc770b22504&#xa;        Address: http://192.168.7.111:5357/ea18ecc8-7bec-4074-a1b3-0b71657a0705/&#xa;        Type: Device pub:Computer&#xa;    239.255.255.250&#xa;      Failed to decode response from device: Unknown error&#xa;    239.255.255.250&#xa;      Failed to decode response from device: Unknown error&#xa;"/><script id="broadcast-netbios-master-browser" output="&#xa;ip  server  domain&#xa;"/><script id="broadcast-listener" output="&#xa;  ether&#xa;      ARP Request&#xa;        sender ip      sender mac    target ip&#xa;        192.168.7.2    9ca2f4267970  192.168.7.127&#xa;        192.168.7.19   8c902dcbd8c0  169.254.169.254&#xa;        192.168.7.222  c0395a44283a  192.168.7.159&#xa;        192.168.7.105  c84f86a64890  192.168.7.86&#xa;  udp&#xa;      SSDP&#xa;        ip             uri&#xa;        192.168.7.111   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.157   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.170   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.248   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.241   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.246   urn:schemas-upnp-org:device:InternetGatewayDevice:1&#xa;        192.168.7.114   urn:dial-multiscreen-org:service:dial:1&#xa;        192.168.7.24    urn:dial-multiscreen-org:service:dial:1&#xa;        192.168.7.12    urn:dial-multiscreen-org:service:dial:1&#xa;        192.168.7.123   urn:dial-multiscreen-org:service:dial:1&#xa;        192.168.7.28    urn:dial-multiscreen-org:service:dial:1&#xa;      MDNS&#xa;        Generic&#xa;          ip             ipv6                                 name&#xa;          192.168.7.26   fc89:4a20:ad6c::bdbc:a0a1:5bfc:3ebb  b.b.e.3.c.f.b.5.1.a.0.a.c.b.d.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.152  fc89:4a20:ad6c::b5cd:eb8c:23db:e52c  c.2.5.e.b.d.3.2.c.8.b.e.d.c.5.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.170  fe80::54ae:e4d1:f19f:b9d6            web-lp-007._dosvc._tcp.local&#xa;          192.168.7.16   fc89:4a20:ad6c::9a0e:38c1:907a:3b85  5.8.b.3.a.7.0.9.1.c.8.3.e.0.a.9.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.24   fc89:4a20:ad6c::159b:28e0:fad7:fcf1  1.f.c.f.7.d.a.f.0.e.8.2.b.9.5.1.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.11   fe80::1f:8eb6:aeab:2e70              D.E.F.D.5.D.E.4.6.F.6.3.B.B.0.1.0.0.0.0.C.6.D.A.0.2.A.4.9.8.C.F.ip6.arpa&#xa;          192.168.7.12   fc89:4a20:ad6c::8f20:e3bb:d2c6:ec10  0.1.c.e.6.c.2.d.b.b.3.e.0.2.f.8.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.123                                       c.7.9.8.6.c.8.1.0.9.8.1.e.a.e.0.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.19   fc89:4a20:ad6c::fb5a:4a16:eec:82b1   1.b.2.8.c.e.e.0.6.1.a.4.a.5.b.f.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.157  fe80::729d:4ea5:3e31:cf2e            Web-Lp-013._dosvc._tcp.local&#xa;          192.168.7.20   fc89:4a20:ad6c::f2f0:b120:34cc:47c2  2.c.7.4.c.c.4.3.0.2.1.b.0.f.2.f.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.28   fc89:4a20:ad6c::b875:d285:4590:2531  1.3.5.2.0.9.5.4.5.8.2.d.5.7.8.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.186  fc89:4a20:ad6c::456f:e896:5bdf:9eb3  3.b.e.9.f.d.b.5.6.9.8.e.f.6.5.4.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.52   fe80::1003:9564:5a4d:a0a6            D.E.D.1.D.E.F.3.6.3.3.B.0.F.0.1.0.0.0.0.C.6.D.A.0.2.A.4.9.8.C.F.ip6.arpa&#xa;          192.168.7.14   fc89:4a20:ad6c::1b5d:e6bb:f653:b274  4.7.2.b.3.5.6.f.b.b.6.e.d.5.b.1.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;          192.168.7.206  fc89:4a20:ad6c::cea2:823d:1a0c:e9a4  4.a.9.e.c.0.a.1.d.3.2.8.2.a.e.c.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa&#xa;      Spotify&#xa;        ip&#xa;        192.168.7.40&#xa;      LLMNR&#xa;        ip                         query&#xa;        fe80::f6b7:43c7:c2ce:f716  DESKTOP-5SDD50T&#xa;        192.168.7.111              DESKTOP-5SDD50T&#xa;        fe80::54de:2936:eadb:4395  DESKTOP-R57LDCQ&#xa;        192.168.7.15               DESKTOP-R57LDCQ&#xa;        fe80::a94b:6e82:19fb:ab73  APC-AP-G2RQPB4&#xa;        192.168.7.239              APC-AP-G2RQPB4&#xa;        fe80::54ae:e4d1:f19f:b9d6  web-lp-007&#xa;        192.168.7.170              web-lp-007&#xa;        fe80::fa38:61d6:dbe5:57c3  APC-AP-23RQPB4&#xa;        192.168.7.248              APC-AP-23RQPB4&#xa;        fe80::729d:4ea5:3e31:cf2e  Web-Lp-013&#xa;        192.168.7.157              Web-Lp-013&#xa;        fe80::76c1:1686:6a12:d678  APC-AP-13RQPB4&#xa;        192.168.7.246              APC-AP-13RQPB4&#xa;        fe80::faf7:62f7:3733:95eb  APC-AP-H2RQPB4&#xa;        192.168.7.241              APC-AP-H2RQPB4&#xa;"/><script id="targets-ipv6-multicast-invalid-dst" output="&#xa;  IP: fe80::f6b7:43c7:c2ce:f716  MAC: 18c04d69e437  IFACE: enp2s0&#xa;  IP: fe80::262:5bb4:c92a:f156   MAC: 3c7c3f0e6aad  IFACE: enp2s0&#xa;  IP: fe80::3e7c:3fff:fe17:b354  MAC: 3c7c3f17b354  IFACE: enp2s0&#xa;  IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0&#xa;  IP: fe80::9ea2:f4ff:fe26:7970  MAC: 9ca2f4267970  IFACE: enp2s0&#xa;  IP: fe80::f25e:9b5a:956b:63a7  MAC: e0d55e35ab9c  IFACE: enp2s0&#xa;  IP: fe80::c239:5aff:fe44:283a  MAC: c0395a44283a  IFACE: enp2s0&#xa;  IP: fe80::1227:f5ff:fe78:fef4  MAC: 1027f578fef4  IFACE: enp2s0&#xa;  IP: fe80::e9e6:e63b:89ca:7598  MAC: 103d1ca1349d  IFACE: enp2s0&#xa;  IP: fe80::446b:abbc:87b9:d4c1  MAC: 8c902dcbca87  IFACE: enp2s0&#xa;  IP: fe80::729d:4ea5:3e31:cf2e  MAC: 5414f35153ab  IFACE: enp2s0&#xa;  IP: fe80::5083:dcbf:27bc:f23f  MAC: d4548be22435  IFACE: enp2s0&#xa;  IP: fe80::1859:704e:1d25:2d43  MAC: fe648b30a8b0  IFACE: enp2s0&#xa;  IP: fe80::14ff:5f5a:32f0:806c  MAC: 149877301e85  IFACE: enp2s0&#xa;  IP: fe80::c739:26f2:eef1:205c  MAC: 202351c367b3  IFACE: enp2s0&#xa;  IP: fe80::90a5:ce63:9f06:c2e2  MAC: ac74b1f2fd9b  IFACE: enp2s0&#xa;  IP: fe80::1f:8eb6:aeab:2e70    MAC: 2ed29bedd4f9  IFACE: enp2s0&#xa;  IP: fe80::1003:9564:5a4d:a0a6  MAC: 149877580761  IFACE: enp2s0&#xa;  IP: fe80::c1dd:c8cc:f938:b177  MAC: 8c902dcbd9ab  IFACE: enp2s0&#xa;  IP: fe80::c5ba:afaa:cf1f:5627  MAC: 80b655cdb225  IFACE: enp2s0&#xa;  IP: fe80::19d7:f3fb:b719:ba72  MAC: 90de80d7f275  IFACE: enp2s0&#xa;  IP: fe80::6f76:6f77:a33f:c981  MAC: 8c902dcbd37c  IFACE: enp2s0&#xa;  IP: fe80::1348:efb3:4d56:cbba  MAC: 8c902dcbd8c0  IFACE: enp2s0&#xa;  IP: fe80::2948:fcf:2671:ad9f   MAC: e848b8c81eae  IFACE: enp2s0&#xa;  IP: fe80::1883:c109:a874:2dc4  MAC: 28ea2d53ce09  IFACE: enp2s0&#xa;  IP: fe80::f9ee:df62:58b9:8ae5  MAC: 586c25a33dd8  IFACE: enp2s0&#xa;  IP: fe80::7aea:c7f1:6ad2:1fce  MAC: 90de80d81334  IFACE: enp2s0&#xa;  Use -&#45;script-args=newtargets to add the results as targets&#xa;"/><script id="broadcast-igmp-discovery" output="&#xa;  192.168.7.15&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.111&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.157&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.170&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.239&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.251&#xa;    Description: mDNS (rfc6762)&#xa;  192.168.7.239&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.241&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.251&#xa;    Description: mDNS (rfc6762)&#xa;  192.168.7.241&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.246&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.248&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 224.0.0.252&#xa;    Description: Link-local Multicast Name Resolution (rfc4795)&#xa;  192.168.7.157&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 239.255.255.250&#xa;    Description: Organization-Local Scope (rfc2365)&#xa;  192.168.7.239&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 239.255.255.250&#xa;    Description: Organization-Local Scope (rfc2365)&#xa;  192.168.7.246&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 239.255.255.250&#xa;    Description: Organization-Local Scope (rfc2365)&#xa;  192.168.7.248&#xa;    Interface: enp2s0&#xa;    Version: 2&#xa;    Group: 239.255.255.250&#xa;    Description: Organization-Local Scope (rfc2365)&#xa;  Use the newtargets script-arg to add the results as targets&#xa;"/><script id="targets-ipv6-multicast-slaac" output="&#xa;  IP: fe80::aca7:2ede:701d:29dc  MAC: e0d55e35ab9c  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0&#xa;  IP: fe80::10bb:36f6:4ed5:dfed  MAC: 2ed29bedd4f9  IFACE: enp2s0&#xa;  IP: fe80::10f0:b336:3fed:1ded  MAC: 149877580761  IFACE: enp2s0&#xa;  IP: fe80::5b53:ec04:f60e:966a  MAC: 8c902dcbd0aa  IFACE: enp2s0&#xa;  IP: fe80::bc72:962b:5d2f:aa18  MAC: 8c902dcbd0aa  IFACE: enp2s0&#xa;  IP: fe80::f2f0:b120:34cc:47c2  MAC: 8c902dcbd9ab  IFACE: enp2s0&#xa;  IP: fe80::fb5a:4a16:eec:82b1   MAC: 8c902dcbd8c0  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0&#xa;  IP: fe80::97fb:87be:b14b:f1de  MAC: fc6d777b3a3b  IFACE: enp2s0&#xa;  IP: fe80::8417:4189:706a:9089  MAC: fc6d777b3a3b  IFACE: enp2s0&#xa;  IP: fe80::9b2b:6111:7c9d:3a6   MAC: 103d1ca1349d  IFACE: enp2s0&#xa;  IP: fe80::b835:193:2fea:ffc9   MAC: 5414f35153ab  IFACE: enp2s0&#xa;  IP: fe80::62e9:d4b4:1685:b783  MAC: fc6d777c8e2c  IFACE: enp2s0&#xa;  IP: fe80::c0cb:dd9:702e:e765   MAC: fc6d777c8e2c  IFACE: enp2s0&#xa;  IP: fe80::ad5a:4670:5ab9:2529  MAC: 18c04d69e437  IFACE: enp2s0&#xa;  IP: fe80::39fa:f3b3:63ba:a510  MAC: 18c04d69e437  IFACE: enp2s0&#xa;  IP: fe80::2b68:155f:6bd:32a3   MAC: fc6d777c8e8b  IFACE: enp2s0&#xa;  IP: fe80::60fc:19ed:ec09:cef7  MAC: fc6d777c8e8b  IFACE: enp2s0&#xa;  IP: fe80::70f4:4c54:2c72:4416  MAC: 9843fa73cfc1  IFACE: enp2s0&#xa;  IP: fe80::25fb:7298:bea1:de99  MAC: 9843fa73cfc1  IFACE: enp2s0&#xa;  IP: fe80::a008:27a9:1c18:ab65  MAC: 8c902dcbca87  IFACE: enp2s0&#xa;  IP: fe80::7cd0:9c59:919e:d681  MAC: 5414f35153ab  IFACE: enp2s0&#xa;  IP: fe80::9290:1571:cdb9:e12e  MAC: 3c7c3f0e6aad  IFACE: enp2s0&#xa;  IP: fe80::bdbc:a0a1:5bfc:3ebb  MAC: 90de80d81334  IFACE: enp2s0&#xa;  IP: fe80::3e66:52b2:d43:2adb   MAC: 8c902dcbd8c0  IFACE: enp2s0&#xa;  IP: fe80::50ac:37be:dda8:b866  MAC: 103d1ca1349d  IFACE: enp2s0&#xa;  IP: fe80::9a1c:c792:b71f:83f8  MAC: 586c25a33dd8  IFACE: enp2s0&#xa;  IP: fe80::a537:788e:a19:48d7   MAC: 90de80d7f275  IFACE: enp2s0&#xa;  IP: fe80::396c:748:4f79:f941   MAC: fc6d777c8e7c  IFACE: enp2s0&#xa;  IP: fe80::55ef:f95a:68c9:4     MAC: fc6d777c8e7c  IFACE: enp2s0&#xa;  IP: fe80::de89:388e:6b42:c166  MAC: e0d55e35ab9c  IFACE: enp2s0&#xa;  IP: fe80::4925:7b32:ce0d:8f1a  MAC: 90de80d80321  IFACE: enp2s0&#xa;  IP: fe80::159b:28e0:fad7:fcf1  MAC: 90de80d80321  IFACE: enp2s0&#xa;  IP: fe80::456f:e896:5bdf:9eb3  MAC: 586c25a33dd8  IFACE: enp2s0&#xa;  IP: fe80::434e:19e4:dc9e:850   MAC: 18c04d9c6fcb  IFACE: enp2s0&#xa;  IP: fe80::8f20:e3bb:d2c6:ec10  MAC: 202351c367b3  IFACE: enp2s0&#xa;  IP: fe80::7984:a03b:9904:cb69  MAC: e848b8c81eae  IFACE: enp2s0&#xa;  IP: fe80::ef8c:63e3:8d25:4498  MAC: 8c902dcbd9ab  IFACE: enp2s0&#xa;  IP: fe80::9a0e:38c1:907a:3b85  MAC: 8c902dcbca87  IFACE: enp2s0&#xa;  IP: fe80::3b56:8d6b:a275:228   MAC: 202351c367b3  IFACE: enp2s0&#xa;  IP: fe80::35e2:770e:e6bc:7d16  MAC: 8c902dcbd37c  IFACE: enp2s0&#xa;  IP: fe80::c231:6440:7258:fd93  MAC: 80b655cdb225  IFACE: enp2s0&#xa;  IP: fe80::cea2:823d:1a0c:e9a4  MAC: e848b8c81eae  IFACE: enp2s0&#xa;  IP: fe80::eae:1890:18c6:897c   MAC: 3c7c3f0e6aad  IFACE: enp2s0&#xa;  IP: fe80::b5cd:eb8c:23db:e52c  MAC: 80b655cdb225  IFACE: enp2s0&#xa;  IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0&#xa;  IP: fe80::1b5d:e6bb:f653:b274  MAC: 8c902dcbd37c  IFACE: enp2s0&#xa;  IP: fe80::5fb:2bec:5588:fa0b   MAC: 90de80d81334  IFACE: enp2s0&#xa;  IP: fe80::b875:d285:4590:2531  MAC: 90de80d7f275  IFACE: enp2s0&#xa;  Use -&#45;script-args=newtargets to add the results as targets&#xa;"/><script id="http-robtex-shared-ns" output="*TEMPORARILY DISABLED* due to changes in Robtex&apos;s API. See https://www.robtex.com/api/"/><script id="targets-ipv6-multicast-mld" output="&#xa;  IP: fe80::1003:9564:5a4d:a0a6  MAC: 149877580761  IFACE: enp2s0&#xa;  IP: fe80::1227:f5ff:fe78:fef4  MAC: 1027f578fef4  IFACE: enp2s0&#xa;  IP: fe80::1348:efb3:4d56:cbba  MAC: 8c902dcbd8c0  IFACE: enp2s0&#xa;  IP: fe80::14ff:5f5a:32f0:806c  MAC: 149877301e85  IFACE: enp2s0&#xa;  IP: fe80::1859:704e:1d25:2d43  MAC: fe648b30a8b0  IFACE: enp2s0&#xa;  IP: fe80::19d7:f3fb:b719:ba72  MAC: 90de80d7f275  IFACE: enp2s0&#xa;  IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0&#xa;  IP: fe80::1eb8:17f6:4d49:353c  MAC: 6cd1995b3605  IFACE: enp2s0&#xa;  IP: fe80::262:5bb4:c92a:f156   MAC: 3c7c3f0e6aad  IFACE: enp2s0&#xa;  IP: fe80::2948:fcf:2671:ad9f   MAC: e848b8c81eae  IFACE: enp2s0&#xa;  IP: fe80::3511:f5e1:95ea:a5ba  MAC: bc389837d863  IFACE: enp2s0&#xa;  IP: fe80::3e7c:3fff:fe17:b354  MAC: 3c7c3f17b354  IFACE: enp2s0&#xa;  IP: fe80::446b:abbc:87b9:d4c1  MAC: 8c902dcbca87  IFACE: enp2s0&#xa;  IP: fe80::5083:dcbf:27bc:f23f  MAC: d4548be22435  IFACE: enp2s0&#xa;  IP: fe80::54ae:e4d1:f19f:b9d6  MAC: 9843fa73cfc1  IFACE: enp2s0&#xa;  IP: fe80::54de:2936:eadb:4395  MAC: 8c902dcbd0aa  IFACE: enp2s0&#xa;  IP: fe80::692:da31:5427:bca4   MAC: 90de80d80321  IFACE: enp2s0&#xa;  IP: fe80::6f76:6f77:a33f:c981  MAC: 8c902dcbd37c  IFACE: enp2s0&#xa;  IP: fe80::729d:4ea5:3e31:cf2e  MAC: 5414f35153ab  IFACE: enp2s0&#xa;  IP: fe80::76c1:1686:6a12:d678  MAC: fc6d777b3a3b  IFACE: enp2s0&#xa;  IP: fe80::7aea:c7f1:6ad2:1fce  MAC: 90de80d81334  IFACE: enp2s0&#xa;  IP: fe80::90a5:ce63:9f06:c2e2  MAC: ac74b1f2fd9b  IFACE: enp2s0&#xa;  IP: fe80::9ea2:f4ff:fe26:7970  MAC: 9ca2f4267970  IFACE: enp2s0&#xa;  IP: fe80::9fbd:af8c:71cf:c31e  MAC: fc6d777c8e40  IFACE: enp2s0&#xa;  IP: fe80::a94b:6e82:19fb:ab73  MAC: fc6d777c8e2c  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0&#xa;  IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0&#xa;  IP: fe80::c1dd:c8cc:f938:b177  MAC: 8c902dcbd9ab  IFACE: enp2s0&#xa;  IP: fe80::c239:5aff:fe44:283a  MAC: c0395a44283a  IFACE: enp2s0&#xa;  IP: fe80::c739:26f2:eef1:205c  MAC: 202351c367b3  IFACE: enp2s0&#xa;  IP: fe80::ca4f:86ff:fea6:4890  MAC: c84f86a64890  IFACE: enp2s0&#xa;  IP: fe80::e9e6:e63b:89ca:7598  MAC: 103d1ca1349d  IFACE: enp2s0&#xa;  IP: fe80::f25e:9b5a:956b:63a7  MAC: e0d55e35ab9c  IFACE: enp2s0&#xa;  IP: fe80::f6b7:43c7:c2ce:f716  MAC: 18c04d69e437  IFACE: enp2s0&#xa;  IP: fe80::fa38:61d6:dbe5:57c3  MAC: fc6d777c8e7c  IFACE: enp2s0&#xa;&#xa;  Use -&#45;script-args=newtargets to add the results as targets"><table>
+<elem key="address">fe80::1003:9564:5a4d:a0a6</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">149877580761</elem>
+</table>
+<table>
+<elem key="address">fe80::1227:f5ff:fe78:fef4</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">1027f578fef4</elem>
+</table>
+<table>
+<elem key="address">fe80::1348:efb3:4d56:cbba</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">8c902dcbd8c0</elem>
+</table>
+<table>
+<elem key="address">fe80::14ff:5f5a:32f0:806c</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">149877301e85</elem>
+</table>
+<table>
+<elem key="address">fe80::1859:704e:1d25:2d43</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">fe648b30a8b0</elem>
+</table>
+<table>
+<elem key="address">fe80::19d7:f3fb:b719:ba72</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">90de80d7f275</elem>
+</table>
+<table>
+<elem key="address">fe80::1ac0:4dff:fe9c:6fcb</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">18c04d9c6fcb</elem>
+</table>
+<table>
+<elem key="address">fe80::1eb8:17f6:4d49:353c</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">6cd1995b3605</elem>
+</table>
+<table>
+<elem key="address">fe80::262:5bb4:c92a:f156</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">3c7c3f0e6aad</elem>
+</table>
+<table>
+<elem key="address">fe80::2948:fcf:2671:ad9f</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">e848b8c81eae</elem>
+</table>
+<table>
+<elem key="address">fe80::3511:f5e1:95ea:a5ba</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">bc389837d863</elem>
+</table>
+<table>
+<elem key="address">fe80::3e7c:3fff:fe17:b354</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">3c7c3f17b354</elem>
+</table>
+<table>
+<elem key="address">fe80::446b:abbc:87b9:d4c1</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">8c902dcbca87</elem>
+</table>
+<table>
+<elem key="address">fe80::5083:dcbf:27bc:f23f</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">d4548be22435</elem>
+</table>
+<table>
+<elem key="address">fe80::54ae:e4d1:f19f:b9d6</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">9843fa73cfc1</elem>
+</table>
+<table>
+<elem key="address">fe80::54de:2936:eadb:4395</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">8c902dcbd0aa</elem>
+</table>
+<table>
+<elem key="address">fe80::692:da31:5427:bca4</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">90de80d80321</elem>
+</table>
+<table>
+<elem key="address">fe80::6f76:6f77:a33f:c981</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">8c902dcbd37c</elem>
+</table>
+<table>
+<elem key="address">fe80::729d:4ea5:3e31:cf2e</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">5414f35153ab</elem>
+</table>
+<table>
+<elem key="address">fe80::76c1:1686:6a12:d678</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">fc6d777b3a3b</elem>
+</table>
+<table>
+<elem key="address">fe80::7aea:c7f1:6ad2:1fce</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">90de80d81334</elem>
+</table>
+<table>
+<elem key="address">fe80::90a5:ce63:9f06:c2e2</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">ac74b1f2fd9b</elem>
+</table>
+<table>
+<elem key="address">fe80::9ea2:f4ff:fe26:7970</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">9ca2f4267970</elem>
+</table>
+<table>
+<elem key="address">fe80::9fbd:af8c:71cf:c31e</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">fc6d777c8e40</elem>
+</table>
+<table>
+<elem key="address">fe80::a94b:6e82:19fb:ab73</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">fc6d777c8e2c</elem>
+</table>
+<table>
+<elem key="address">fe80::be24:11ff:fe1b:95de</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">bc24111b95de</elem>
+</table>
+<table>
+<elem key="address">fe80::be24:11ff:fea5:8107</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">bc2411a58107</elem>
+</table>
+<table>
+<elem key="address">fe80::c1dd:c8cc:f938:b177</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">8c902dcbd9ab</elem>
+</table>
+<table>
+<elem key="address">fe80::c239:5aff:fe44:283a</elem>
+<elem key="iface">enp2s0</elem>
+<elem key="mac">c0395a44283a</elem>
+</table>
+<table>
+<elem

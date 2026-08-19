@@ -1,0 +1,8 @@
+NSOCK ERROR [0.3680s] mksock_bind_addr(): Bind to 0.0.0.0:658 failed (IOD #4): Permission denied (13)
+NSOCK ERROR [0.4060s] mksock_bind_addr(): Bind to 0.0.0.0:68 failed (IOD #18): Permission denied (13)
+NSOCK ERROR [5.7390s] mksock_bind_addr(): Bind to 0.0.0.0:68 failed (IOD #78): Permission denied (13)
+NSOCK ERROR [10.9040s] mksock_bind_addr(): Bind to 0.0.0.0:68 failed (IOD #91): Permission denied (13)
+NSOCK ERROR [11.0230s] mksock_bind_addr(): Bind to 0.0.0.0:986 failed (IOD #92): Permission denied (13)
+NSOCK ERROR [16.0040s] mksock_bind_addr(): Bind to 0.0.0.0:68 failed (IOD #93): Permission denied (13)
+Got nsock WRITE error #5 (Input/output error)
+WARNING: Service 127.0.0.1:9200 had already soft-matched rtsp, but now soft-matched sip; ignoring second value

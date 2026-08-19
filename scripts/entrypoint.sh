@@ -24,8 +24,9 @@ if [ "${RUN_ON_STARTUP:-true}" = "true" ]; then
 fi
 
 echo "[entrypoint] handing off to cron daemon for scheduled runs"
-# Install rendered crontab and start cron in background, then exec to keep container alive
+# Install rendered crontab and start cron in background
 crontab "${RENDERED_CRON}"
 cron
-echo "[entrypoint] cron started, keeping container alive"
-wait
+echo "[entrypoint] cron started"
+# Keep container alive - wait for any child process or sleep indefinitely
+exec tail -f /dev/null
