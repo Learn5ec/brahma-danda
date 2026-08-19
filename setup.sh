@@ -7,9 +7,19 @@ echo "=========================================="
 echo " Brahma-Danda Setup"
 echo "=========================================="
 
+# ── 0. Initialize .env ──
+echo ""
+echo "[0/7] Initializing .env..."
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "  → Created .env from .env.example"
+else
+    echo "  ✓ .env already exists."
+fi
+
 # ── 1. Check prerequisites ──
 echo ""
-echo "[1/6] Checking prerequisites..."
+echo "[1/7] Checking prerequisites..."
 
 for cmd in docker docker compose python3 jq; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -21,7 +31,7 @@ echo "  ✓ All prerequisites found."
 
 # ── 2. Secrets initialization ──
 echo ""
-echo "[2/6] Setting up secrets..."
+echo "[2/7] Setting up secrets..."
 mkdir -p secrets
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -60,7 +70,7 @@ fi
 
 # ── 3. LLM Backend Selection ──
 echo ""
-echo "[3/6] Select LLM Backend"
+echo "[3/7] Select LLM Backend"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo " Choose how Brahma-Danda powers the Threat Brief:"
@@ -196,9 +206,85 @@ case $LLM_OPTION in
         ;;
 esac
 
-# ── 4. Slack Channel ID ──
+# ── 4. LLM Health Check ──
 echo ""
-echo "[4/6] Slack Channel Configuration"
+echo "[4/8] Testing LLM Connection..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+LLM_OK=false
+
+# Determine which LLM backend was configured
+if [ -n "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ]; then
+    OLLAMA_URL=$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)
+    OLLAMA_MODEL=$(grep -v '^#' .env | grep '^OLLAMA_MODEL=' | cut -d= -f2-)
+    echo "  Testing Ollama at ${OLLAMA_URL}..."
+    RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 "${OLLAMA_URL}/api/chat" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"${OLLAMA_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}],\"stream\":false}" 2>&1)
+    if echo "$RESPONSE" | grep -qi '"message"'; then
+        echo "  ✓ LLM connection successful!"
+        LLM_OK=true
+    else
+        echo "  ✗ LLM connection failed. Response: $RESPONSE"
+        echo ""
+        echo "  Please check:"
+        echo "    - The Ollama base URL is correct and reachable"
+        echo "    - The model name is correct and the model is pulled"
+        echo "    - Ollama is running (check with: ollama ls)"
+        exit 1
+    fi
+elif [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ]; then
+    BASE_URL=$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)
+    AUTH_TOKEN=$(grep -v '^#' .env | grep '^ANTHROPIC_AUTH_TOKEN=' | cut -d= -f2-)
+    CLAUDE_MODEL=$(grep -v '^#' .env | grep '^CLAUDE_MODEL=' | cut -d= -f2-)
+    echo "  Testing Anthropic-compatible gateway at ${BASE_URL}..."
+    RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
+        -X POST "${BASE_URL}/v1/messages" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: ${AUTH_TOKEN}" \
+        -H "anthropic-version: 2023-06-01" \
+        -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
+    if echo "$RESPONSE" | grep -qi '"content"'; then
+        echo "  ✓ LLM connection successful!"
+        LLM_OK=true
+    else
+        echo "  ✗ LLM connection failed. Response: $RESPONSE"
+        echo ""
+        echo "  Please check:"
+        echo "    - The base URL and auth token are correct"
+        echo "    - The gateway is accessible"
+        exit 1
+    fi
+elif [ -f secrets/claude_api_key.txt ]; then
+    API_KEY=$(cat secrets/claude_api_key.txt)
+    CLAUDE_MODEL=$(grep -v '^#' .env | grep '^CLAUDE_MODEL=' | cut -d= -f2-)
+    echo "  Testing Anthropic API..."
+    RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
+        -X POST "https://api.anthropic.com/v1/messages" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: ${API_KEY}" \
+        -H "anthropic-version: 2023-06-01" \
+        -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
+    if echo "$RESPONSE" | grep -qi '"content"'; then
+        echo "  ✓ LLM connection successful!"
+        LLM_OK=true
+    else
+        echo "  ✗ LLM connection failed. Response: $RESPONSE"
+        echo ""
+        echo "  Please check:"
+        echo "    - The API key is valid"
+        echo "    - Your Anthropic account has credits available"
+        exit 1
+    fi
+else
+    echo "  ⚠ No LLM backend configured — skipping LLM check."
+    echo "  You can re-run setup.sh later to configure an LLM backend."
+    LLM_OK=true
+fi
+
+# ── 5. Slack Channel ID ──
+echo ""
+echo "[4/7] Slack Channel Configuration"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo " Get your channel ID:"
@@ -206,11 +292,6 @@ echo "  1. In Slack, click the channel name → 'Copy link'"
 echo "  2. The URL contains the channel ID (e.g., https://your-workspace.slack.com/archives/C0123ABCXYZ)"
 echo "  3. Copy the ID part (e.g., C0123ABCXYZ)"
 echo ""
-
-if [ ! -f .env ]; then
-    cp .env.example .env
-    echo "  → Created .env from .env.example"
-fi
 
 read -r -p "Enter Slack channel ID: " CHANNEL_ID
 if [ -z "$CHANNEL_ID" ]; then
@@ -222,15 +303,49 @@ echo "  ✓ Slack channel configured."
 
 # ── 5. Docker build ──
 echo ""
-echo "[5/6] Building Docker image..."
+echo "[6/8] Building Docker image..."
 docker compose build --no-cache brahmadanda
 echo "  ✓ Image built: brahma-danda:1.0.0"
 
 # ── 6. Create volumes and start init container ──
 echo ""
-echo "[6/6] Initializing Docker resources..."
+echo "[7/8] Initializing Docker resources..."
 docker compose up -d brahma-danda-init
 echo "  ✓ Volumes and networks ready."
+
+# ── 8. Slack Onboarding Check (last step) ──
+echo ""
+echo "[8/8] Verifying Slack Connection & Onboarding..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+SLACK_TOKEN=$(cat secrets/slack_bot_token.txt)
+MACHINE_NAME=$(hostname)
+
+# Determine the Slack message format (bold + italic in Slack uses *_text_*)
+SLACK_TEXT="*${MACHINE_NAME} _onboarded_*"
+
+echo "  Sending onboarding message to Slack channel: ${CHANNEL_ID}"
+echo "  Message: ${SLACK_TEXT}"
+
+SLACK_RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
+    -X POST "https://slack.com/api/chat.postMessage" \
+    -H "Authorization: Bearer ${SLACK_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "{\"channel\":\"${CHANNEL_ID}\",\"text\":\"${SLACK_TEXT}\"}" 2>&1)
+
+if echo "$SLACK_RESPONSE" | grep -q '"ok":true'; then
+    echo "  ✓ Slack connection successful!"
+    echo "  ✓ Onboarding message posted: ${SLACK_TEXT}"
+else
+    echo "  ✗ Slack connection failed."
+    echo "  Response: ${SLACK_RESPONSE}"
+    echo ""
+    echo "  Please check:"
+    echo "    - The Slack bot token is valid (secrets/slack_bot_token.txt)"
+    echo "    - The channel ID is correct"
+    echo "    - The bot has been added to the channel"
+    exit 1
+fi
 
 # ── Done ──
 echo ""

@@ -1,0 +1,743 @@
+# Nmap 7.93 scan initiated Tue Aug 18 14:39:02 2026 as: nmap -sV -sC --script default,discovery,safe,auth,version,ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods -p- --max-retries 2 --host-timeout 20m -oX /app/reports/2026-08-18T143827Z/nmap.xml -oN /app/reports/2026-08-18T143827Z/nmap.txt localhost
+Pre-scan script results:
+| ipv6-multicast-mld-list: 
+|   fe80::f6b7:43c7:c2ce:f716: 
+|     device: enp2s0
+|     mac: 18c04d69e437
+|     multicast_ips: 
+|       ff02::c                   (SSDP)
+|       ff02::1:ffba:a510         (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ffb9:2529         (Solicited-Node Address)
+|       ff02::1:ffb9:2529         (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ffce:f716         (NDP Solicited-node)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffce:f716         (NDP Solicited-node)
+|   fe80::3e7c:3fff:fe17:b354: 
+|     device: enp2s0
+|     mac: 3c7c3f17b354
+|     multicast_ips: 
+|       ff02::1:ff00:0            (Solicited-Node Address)
+|       ff02::2                   (All Routers Address)
+|       ff02::2                   (All Routers Address)
+|       ff05::2                   (unknown)
+|       ff02::1:ff17:b354         (NDP Solicited-node)
+|       ff02::6a                  (All-Snoopers)
+|       ff05::2                   (unknown)
+|   fe80::2948:fcf:2671:ad9f: 
+|     device: enp2s0
+|     mac: e848b8c81eae
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff0c:e9a4         (Solicited-Node Address)
+|       ff02::1:ff04:cb69         (Solicited-Node Address)
+|       ff02::1:ff71:ad9f         (NDP Solicited-node)
+|   fe80::5083:dcbf:27bc:f23f: 
+|     device: enp2s0
+|     mac: d4548be22435
+|     multicast_ips: 
+|       ff02::1:ffbc:f23f         (NDP Solicited-node)
+|       ff02::1:ffbc:f23f         (NDP Solicited-node)
+|   fe80::7aea:c7f1:6ad2:1fce: 
+|     device: enp2s0
+|     mac: 90de80d81334
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff88:fa0b         (Solicited-Node Address)
+|       ff02::1:fffc:3ebb         (Solicited-Node Address)
+|       ff02::1:ffd2:1fce         (NDP Solicited-node)
+|       ff02::1:ff88:fa0b         (Solicited-Node Address)
+|       ff02::1:fffc:3ebb         (Solicited-Node Address)
+|       ff02::1:ffd2:1fce         (NDP Solicited-node)
+|   fe80::76c1:1686:6a12:d678: 
+|     device: enp2s0
+|     mac: fc6d777b3a3b
+|     multicast_ips: 
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::c                   (SSDP)
+|       ff02::1:ff6a:9089         (Solicited-Node Address)
+|       ff02::1:ff6a:9089         (Solicited-Node Address)
+|       ff02::1:ff12:d678         (NDP Solicited-node)
+|       ff02::1:ff4b:f1de         (Solicited-Node Address)
+|       ff02::c                   (SSDP)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff12:d678         (NDP Solicited-node)
+|   fe80::c1dd:c8cc:f938:b177: 
+|     device: enp2s0
+|     mac: 8c902dcbd9ab
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffcc:47c2         (Solicited-Node Address)
+|       ff02::1:ff25:4498         (Solicited-Node Address)
+|       ff02::1:ff38:b177         (NDP Solicited-node)
+|   fe80::14ff:5f5a:32f0:806c: 
+|     device: enp2s0
+|     mac: 149877301e85
+|     multicast_ips: 
+|       ff02::2:ffce:c9f5         (Node Information Queries)
+|       ff02::1:fff0:806c         (NDP Solicited-node)
+|   fe80::be24:11ff:fe1b:95de: 
+|     device: enp2s0
+|     mac: bc24111b95de
+|     multicast_ips: 
+|       ff02::1:ff1b:95de         (NDP Solicited-node)
+|   fe80::c739:26f2:eef1:205c: 
+|     device: enp2s0
+|     mac: 202351c367b3
+|     multicast_ips: 
+|       ff02::1:ff75:228          (Solicited-Node Address)
+|       ff02::1:fff1:205c         (NDP Solicited-node)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffc6:ec10         (Solicited-Node Address)
+|       ff02::1:ff75:228          (Solicited-Node Address)
+|   fe80::19d7:f3fb:b719:ba72: 
+|     device: enp2s0
+|     mac: 90de80d7f275
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff90:2531         (Solicited-Node Address)
+|       ff02::1:ff19:48d7         (Solicited-Node Address)
+|       ff02::1:ff19:ba72         (NDP Solicited-node)
+|   fe80::3511:f5e1:95ea:a5ba: 
+|     device: enp2s0
+|     mac: bc389837d863
+|     multicast_ips: 
+|       ff02::c                   (SSDP)
+|       ff02::1:ffea:a5ba         (NDP Solicited-node)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffea:a5ba         (NDP Solicited-node)
+|   fe80::692:da31:5427:bca4: 
+|     device: enp2s0
+|     mac: 90de80d80321
+|     multicast_ips: 
+|       ff02::1:ff0d:8f1a         (Solicited-Node Address)
+|       ff02::1:ff27:bca4         (NDP Solicited-node)
+|       ff02::1:ff0d:8f1a         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffd7:fcf1         (Solicited-Node Address)
+|       ff02::1:ffd7:fcf1         (Solicited-Node Address)
+|   fe80::1ac0:4dff:fe9c:6fcb: 
+|     device: enp2s0
+|     mac: 18c04d9c6fcb
+|     multicast_ips: 
+|       ff02::1:ff9e:850          (Solicited-Node Address)
+|       ff12::8384                (unknown)
+|       ff02::1:ff9c:6fcb         (NDP Solicited-node)
+|       ff02::c                   (SSDP)
+|       ff12::8384                (unknown)
+|   fe80::90a5:ce63:9f06:c2e2: 
+|     device: enp2s0
+|     mac: ac74b1f2fd9b
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|   fe80::e9e6:e63b:89ca:7598: 
+|     device: enp2s0
+|     mac: 103d1ca1349d
+|     multicast_ips: 
+|       ff02::1:ff9d:3a6          (Solicited-Node Address)
+|       ff02::1:ffa8:b866         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffca:7598         (NDP Solicited-node)
+|   fe80::1003:9564:5a4d:a0a6: 
+|     device: enp2s0
+|     mac: 149877580761
+|     multicast_ips: 
+|       ff02::1:ffed:1ded         (Solicited-Node Address)
+|       ff02::2:ffb0:5837         (Node Information Queries)
+|       ff02::1:ff4d:a0a6         (NDP Solicited-node)
+|       ff02::2:ffb0:5837         (Node Information Queries)
+|   fe80::1eb8:17f6:4d49:353c: 
+|     device: enp2s0
+|     mac: 6cd1995b3605
+|     multicast_ips: 
+|       ff02::1:ff49:353c         (NDP Solicited-node)
+|   fe80::262:5bb4:c92a:f156: 
+|     device: enp2s0
+|     mac: 3c7c3f0e6aad
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff2a:f156         (NDP Solicited-node)
+|       ff02::1:ffc6:897c         (Solicited-Node Address)
+|       ff02::1:ffc6:897c         (Solicited-Node Address)
+|       ff02::1:ffb9:e12e         (Solicited-Node Address)
+|       ff02::1:ffb9:e12e         (Solicited-Node Address)
+|   fe80::9fbd:af8c:71cf:c31e: 
+|     device: enp2s0
+|     mac: fc6d777c8e40
+|     multicast_ips: 
+|       ff02::c                   (SSDP)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffcf:c31e         (NDP Solicited-node)
+|   fe80::729d:4ea5:3e31:cf2e: 
+|     device: enp2s0
+|     mac: 5414f35153ab
+|     multicast_ips: 
+|       ff02::1:ffea:ffc9         (Solicited-Node Address)
+|       ff02::1:ff9e:d681         (Solicited-Node Address)
+|       ff02::1:ffea:ffc9         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::c                   (SSDP)
+|       ff02::1:ff31:cf2e         (NDP Solicited-node)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff9e:d681         (Solicited-Node Address)
+|       ff02::c                   (SSDP)
+|       ff02::1:ff9e:d681         (Solicited-Node Address)
+|   fe80::be24:11ff:fea5:8107: 
+|     device: enp2s0
+|     mac: bc2411a58107
+|     multicast_ips: 
+|       ff02::1:ffa5:8107         (NDP Solicited-node)
+|       ff02::1:ffa5:8107         (NDP Solicited-node)
+|   fe80::a94b:6e82:19fb:ab73: 
+|     device: enp2s0
+|     mac: fc6d777c8e2c
+|     multicast_ips: 
+|       ff02::1:ff85:b783         (Solicited-Node Address)
+|       ff02::1:ff85:b783         (Solicited-Node Address)
+|       ff02::1:fffb:ab73         (NDP Solicited-node)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff2e:e765         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::c                   (SSDP)
+|       ff02::1:ff2e:e765         (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|   fe80::fa38:61d6:dbe5:57c3: 
+|     device: enp2s0
+|     mac: fc6d777c8e7c
+|     multicast_ips: 
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff79:f941         (Solicited-Node Address)
+|       ff02::1:ffc9:4            (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ffe5:57c3         (NDP Solicited-node)
+|       ff02::c                   (SSDP)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffe5:57c3         (NDP Solicited-node)
+|   fe80::ca4f:86ff:fea6:4890: 
+|     device: enp2s0
+|     mac: c84f86a64890
+|     multicast_ips: 
+|       ff02::1:ff00:0            (Solicited-Node Address)
+|       ff02::1:ffa6:4890         (NDP Solicited-node)
+|       ff05::2                   (unknown)
+|       ff02::1:ff00:0            (Solicited-Node Address)
+|       ff02::2                   (All Routers Address)
+|       ff02::1:ffa6:4890         (NDP Solicited-node)
+|       ff05::2                   (unknown)
+|       ff02::2                   (All Routers Address)
+|   fe80::c239:5aff:fe44:283a: 
+|     device: enp2s0
+|     mac: c0395a44283a
+|     multicast_ips: 
+|       ff02::1:ff44:283a         (NDP Solicited-node)
+|       ff02::1:ff44:283a         (NDP Solicited-node)
+|       ff02::c                   (SSDP)
+|       ff02::c                   (SSDP)
+|   fe80::1227:f5ff:fe78:fef4: 
+|     device: enp2s0
+|     mac: 1027f578fef4
+|     multicast_ips: 
+|       ff02::1:ff00:0            (Solicited-Node Address)
+|       ff02::1:ff78:fef4         (NDP Solicited-node)
+|       ff02::2                   (All Routers Address)
+|   fe80::54ae:e4d1:f19f:b9d6: 
+|     device: enp2s0
+|     mac: 9843fa73cfc1
+|     multicast_ips: 
+|       ff02::1:ff72:4416         (Solicited-Node Address)
+|       ff02::1:ff9f:b9d6         (NDP Solicited-node)
+|       ff02::1:ffa1:de99         (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff72:4416         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ffa1:de99         (Solicited-Node Address)
+|       ff02::c                   (SSDP)
+|       ff02::1:ff9f:b9d6         (NDP Solicited-node)
+|   fe80::1348:efb3:4d56:cbba: 
+|     device: enp2s0
+|     mac: 8c902dcbd8c0
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ffec:82b1         (Solicited-Node Address)
+|       ff02::1:ff43:2adb         (Solicited-Node Address)
+|       ff02::1:ff56:cbba         (NDP Solicited-node)
+|   fe80::6f76:6f77:a33f:c981: 
+|     device: enp2s0
+|     mac: 8c902dcbd37c
+|     multicast_ips: 
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff53:b274         (Solicited-Node Address)
+|       ff02::1:ffbc:7d16         (Solicited-Node Address)
+|       ff02::1:ff3f:c981         (NDP Solicited-node)
+|   fe80::f25e:9b5a:956b:63a7: 
+|     device: enp2s0
+|     mac: e0d55e35ab9c
+|     multicast_ips: 
+|       ff02::1:ff1d:29dc         (Solicited-Node Address)
+|       ff02::1:ff6b:63a7         (NDP Solicited-node)
+|       ff02::1:ff42:c166         (Solicited-Node Address)
+|       ff02::1:ff42:c166         (Solicited-Node Address)
+|   fe80::1859:704e:1d25:2d43: 
+|     device: enp2s0
+|     mac: fe648b30a8b0
+|     multicast_ips: 
+|       ff02::1:ff25:2d43         (NDP Solicited-node)
+|       ff02::2:ff28:9cef         (Node Information Queries)
+|   fe80::54de:2936:eadb:4395: 
+|     device: enp2s0
+|     mac: 8c902dcbd0aa
+|     multicast_ips: 
+|       ff02::c                   (SSDP)
+|       ff02::1:ffdb:4395         (NDP Solicited-node)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff0e:966a         (Solicited-Node Address)
+|       ff02::1:ff2f:aa18         (Solicited-Node Address)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|       ff02::1:ff0e:966a         (Solicited-Node Address)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:3                 (Link-local Multicast Name Resolution)
+|   fe80::446b:abbc:87b9:d4c1: 
+|     device: enp2s0
+|     mac: 8c902dcbca87
+|     multicast_ips: 
+|       ff02::1:ff18:ab65         (Solicited-Node Address)
+|       ff02::1:ffb9:d4c1         (NDP Solicited-node)
+|       ff02::fb                  (mDNSv6)
+|       ff02::1:ff7a:3b85         (Solicited-Node Address)
+|       ff02::1:ffb9:d4c1         (NDP Solicited-node)
+|   fe80::9ea2:f4ff:fe26:7970: 
+|     device: enp2s0
+|     mac: 9ca2f4267970
+|     multicast_ips: 
+|       ff02::2                   (All Routers Address)
+|       ff02::1:ff26:7970         (NDP Solicited-node)
+|       ff05::2                   (unknown)
+|_      ff02::1:ff00:0            (Solicited-Node Address)
+|_hostmap-robtex: *TEMPORARILY DISABLED* due to changes in Robtex's API. See https://www.robtex.com/api/
+| broadcast-dns-service-discovery: 
+|   224.0.0.251
+|     22/tcp ssh
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     22/tcp sftp-ssh
+|       Address=192.168.7.40 fe80::1859:704e:1d25:2d43
+|     22/tcp ssh
+|       Address=192.168.7.148
+|     22/tcp sftp-ssh
+|       Address=192.168.7.148
+|     22/tcp ssh
+|       Address=192.168.7.40 fe80::1859:704e:1d25:2d43
+|     22/tcp sftp-ssh
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     445/tcp smb
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     445/tcp smb
+|       Address=192.168.7.20 fc89:4a20:ad6c::f2f0:b120:34cc:47c2
+|     3283/udp net-assistant
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     7000/tcp raop
+|       cn=0,1,2,3
+|       da=true
+|       et=0,3,5
+|       ft=0x4A7FCFD5,0x38174FDE
+|       Address=192.168.7.56 fe80::8b:1cc7:7dbc:fb6f
+|     7000/tcp airplay
+|       act=2
+|       acl=0
+|       deviceid=72:13:31:4A:9D:C7
+|       fex=1c9/St5PFzg2IYxA
+|       features=0x4A7FCFD5,0x38174FDE
+|       rsf=0x8
+|       flags=0x204
+|       gid=E729BA3D-FF37-4D81-BA4F-F92ABC32BD9C
+|       igl=0
+|       gcgl=0
+|       model=MacBookPro17,1
+|       at=4
+|       protovers=1.1
+|       pi=00000000-0000-0000-0000-28ea2d590605
+|       Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70
+|     7000/tcp raop
+|       cn=0,1,2,3
+|       da=true
+|       et=0,3,5
+|       ft=0x4A7FCFD5,0xB8174FDE
+|       Address=192.168.7.40 fe80::1859:704e:1d25:2d43
+|     7000/tcp raop
+|       cn=0,1,2,3
+|       da=true
+|       et=0,3,5
+|       ft=0x4A7FCFD5,0x38174FDE
+|       sf=0x204
+|       md=0,1,2
+|       Address=192.168.7.148
+|     7000/tcp airplay
+|       act=2
+|       acl=0
+|       deviceid=2A:CA:EC:B3:7F:1A
+|       fex=1c9/St5PFzg2IQw
+|       features=0x4A7FCFD5,0x38174FDE
+|       rsf=0x8
+|       flags=0x204
+|       gid=DE7F8114-A2F2-437B-8BB0-A77BC7F6F004
+|       igl=0
+|       gcgl=0
+|       model=Macmini9,1
+|       at=4
+|       protovers=1.1
+|       pi=6e7e1f71-d37d-4e5d-9c38-6e0ba9404173
+|       psi=29CAECB3-7F1A-4B9C-A06B-6C249BD800F4
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     7000/tcp airplay
+|       act=2
+|       acl=0
+|       deviceid=42:A2:AA:DE:0A:0F
+|       fex=1c9/St5PFzg2IYxA
+|       features=0x4A7FCFD5,0x38174FDE
+|       rsf=0x8
+|       flags=0x204
+|       gid=F0ED1E7B-38DC-4E41-AF28-BFFDE70C362D
+|       igl=0
+|       gcgl=0
+|       model=Mac14,3
+|       at=4
+|       protovers=1.1
+|       pi=088e1a09-c364-4189-88a6-c3b6780b2938
+|       Address=192.168.7.56 fe80::8b:1cc7:7dbc:fb6f
+|     7000/tcp airplay
+|       act=2
+|       acl=0
+|       deviceid=BE:06:BF:51:FD:8B
+|       fex=1c9/St5PFzg2IYxA
+|       features=0x4A7FCFD5,0x38174FDE
+|       rsf=0x8
+|       flags=0x204
+|       gid=0C1687A1-EDD4-450B-92A3-368B6885D2CE
+|       igl=0
+|       gcgl=0
+|       model=Mac14,9
+|       at=4
+|       protovers=1.1
+|       pi=957c5336-143a-416e-a037-972596962409
+|       psi=BD06BF51-FD8B-4E52-A98C-6CB07557B4C2
+|       Address=192.168.7.148
+|     7000/tcp airplay
+|       act=2
+|       acl=0
+|       deviceid=EE:F5:47:99:C0:33
+|       fex=1c9/St5PF7g2IQw
+|       features=0x4A7FCFD5,0xB8174FDE
+|       rsf=0x8
+|       flags=0x204
+|       gid=14231BA0-3512-451A-9F0E-A71F2E033B8D
+|       igl=0
+|       gcgl=0
+|       model=Macmini9,1
+|       at=4
+|       protovers=1.1
+|       pi=80adbba2-0635-4b08-aed3-2128e64c0ceb
+|       Address=192.168.7.40 fe80::1859:704e:1d25:2d43
+|     7000/tcp raop
+|       cn=0,1,2,3
+|       da=true
+|       et=0,3,5
+|       ft=0x4A7FCFD5,0x38174FDE
+|       sf=0x204
+|       md=0,1,2
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     7000/tcp raop
+|       cn=0,1,2,3
+|       da=true
+|       et=0,3,5
+|       ft=0x4A7FCFD5,0x38174FDE
+|       sf=0x204
+|       Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70
+|     32498/tcp apple-mobdev2
+|       Address=192.168.7.9 fe80::1883:c109:a874:2dc4
+|     49152/tcp companion-link
+|       rpMac=0
+|       rpHN=2276ddc16bf4
+|       Address=192.168.7.45 fe80::14ff:5f5a:32f0:806c
+|     49152/tcp remotepairing
+|       Address=192.168.7.9 fe80::1883:c109:a874:2dc4
+|     52827/tcp companion-link
+|       Address=192.168.7.52 fe80::1003:9564:5a4d:a0a6
+|     53944/tcp companion-link
+|       Address=192.168.7.40 fe80::1859:704e:1d25:2d43
+|     55257/udp asquic
+|       Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70
+|     60020/tcp companion-link
+|       Address=192.168.7.146
+|     62570/tcp companion-link
+|       Address=192.168.7.11 fe80::1f:8eb6:aeab:2e70
+|     64488/tcp companion-link
+|       Address=192.168.7.148
+|     Device Information
+|_      Address=192.168.7.20 fc89:4a20:ad6c::f2f0:b120:34cc:47c2
+|_eap-info: please specify an interface with -e
+| targets-ipv6-multicast-echo: 
+|   IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0
+|   IP: fe80::c5ba:afaa:cf1f:5627  MAC: 80b655cdb225  IFACE: enp2s0
+|   IP: fe80::262:5bb4:c92a:f156   MAC: 3c7c3f0e6aad  IFACE: enp2s0
+|   IP: fe80::1883:c109:a874:2dc4  MAC: 28ea2d53ce09  IFACE: enp2s0
+|   IP: fe80::3e7c:3fff:fe17:b354  MAC: 3c7c3f17b354  IFACE: enp2s0
+|   IP: fe80::19d7:f3fb:b719:ba72  MAC: 90de80d7f275  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0
+|   IP: fe80::1348:efb3:4d56:cbba  MAC: 8c902dcbd8c0  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0
+|   IP: fe80::2948:fcf:2671:ad9f   MAC: e848b8c81eae  IFACE: enp2s0
+|   IP: fe80::9ea2:f4ff:fe26:7970  MAC: 9ca2f4267970  IFACE: enp2s0
+|   IP: fe80::f25e:9b5a:956b:63a7  MAC: e0d55e35ab9c  IFACE: enp2s0
+|   IP: fe80::ca4f:86ff:fea6:4890  MAC: c84f86a64890  IFACE: enp2s0
+|   IP: fe80::1227:f5ff:fe78:fef4  MAC: 1027f578fef4  IFACE: enp2s0
+|   IP: fe80::c239:5aff:fe44:283a  MAC: c0395a44283a  IFACE: enp2s0
+|   IP: fe80::14ff:5f5a:32f0:806c  MAC: 149877301e85  IFACE: enp2s0
+|   IP: fe80::37c1:ec2e:4f47:546b  MAC: d09cae284ab7  IFACE: enp2s0
+|   IP: fe80::c1dd:c8cc:f938:b177  MAC: 8c902dcbd9ab  IFACE: enp2s0
+|   IP: fe80::c739:26f2:eef1:205c  MAC: 202351c367b3  IFACE: enp2s0
+|   IP: fe80::1859:704e:1d25:2d43  MAC: fe648b30a8b0  IFACE: enp2s0
+|   IP: fe80::1f:8eb6:aeab:2e70    MAC: 2ed29bedd4f9  IFACE: enp2s0
+|   IP: fe80::90a5:ce63:9f06:c2e2  MAC: ac74b1f2fd9b  IFACE: enp2s0
+|   IP: fe80::1003:9564:5a4d:a0a6  MAC: 149877580761  IFACE: enp2s0
+|_  Use --script-args=newtargets to add the results as targets
+| broadcast-ping: 
+|   IP: 192.168.7.45   MAC: 149877301e85
+|   IP: 192.168.7.9    MAC: 28ea2d53ce09
+|   IP: 192.168.7.11   MAC: 2ed29bedd4f9
+|   IP: 192.168.7.40   MAC: fe648b30a8b0
+|   IP: 192.168.7.52   MAC: 149877580761
+|   IP: 192.168.7.146  MAC: f84d898326b9
+|   IP: 192.168.7.148  MAC: 6c7e67c55de2
+|_  Use --script-args=newtargets to add the results as targets
+| broadcast-wsdd-discover: 
+|   Devices
+|     239.255.255.250
+|       Failed to decode response from device: 
+|     239.255.255.250
+|         Message id: bf443e5a-a7c9-43bb-aeab-9cc770b22504
+|         Address: http://192.168.7.111:5357/ea18ecc8-7bec-4074-a1b3-0b71657a0705/
+|         Type: Device pub:Computer
+|     239.255.255.250
+|       Failed to decode response from device: Unknown error
+|     239.255.255.250
+|_      Failed to decode response from device: Unknown error
+| broadcast-netbios-master-browser: 
+|_ip  server  domain
+| broadcast-listener: 
+|   ether
+|       ARP Request
+|         sender ip      sender mac    target ip
+|         192.168.7.2    9ca2f4267970  192.168.7.127
+|         192.168.7.19   8c902dcbd8c0  169.254.169.254
+|         192.168.7.222  c0395a44283a  192.168.7.159
+|         192.168.7.105  c84f86a64890  192.168.7.86
+|   udp
+|       SSDP
+|         ip             uri
+|         192.168.7.111   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.157   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.170   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.248   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.241   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.246   urn:schemas-upnp-org:device:InternetGatewayDevice:1
+|         192.168.7.114   urn:dial-multiscreen-org:service:dial:1
+|         192.168.7.24    urn:dial-multiscreen-org:service:dial:1
+|         192.168.7.12    urn:dial-multiscreen-org:service:dial:1
+|         192.168.7.123   urn:dial-multiscreen-org:service:dial:1
+|         192.168.7.28    urn:dial-multiscreen-org:service:dial:1
+|       MDNS
+|         Generic
+|           ip             ipv6                                 name
+|           192.168.7.26   fc89:4a20:ad6c::bdbc:a0a1:5bfc:3ebb  b.b.e.3.c.f.b.5.1.a.0.a.c.b.d.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.152  fc89:4a20:ad6c::b5cd:eb8c:23db:e52c  c.2.5.e.b.d.3.2.c.8.b.e.d.c.5.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.170  fe80::54ae:e4d1:f19f:b9d6            web-lp-007._dosvc._tcp.local
+|           192.168.7.16   fc89:4a20:ad6c::9a0e:38c1:907a:3b85  5.8.b.3.a.7.0.9.1.c.8.3.e.0.a.9.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.24   fc89:4a20:ad6c::159b:28e0:fad7:fcf1  1.f.c.f.7.d.a.f.0.e.8.2.b.9.5.1.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.11   fe80::1f:8eb6:aeab:2e70              D.E.F.D.5.D.E.4.6.F.6.3.B.B.0.1.0.0.0.0.C.6.D.A.0.2.A.4.9.8.C.F.ip6.arpa
+|           192.168.7.12   fc89:4a20:ad6c::8f20:e3bb:d2c6:ec10  0.1.c.e.6.c.2.d.b.b.3.e.0.2.f.8.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.123                                       c.7.9.8.6.c.8.1.0.9.8.1.e.a.e.0.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.19   fc89:4a20:ad6c::fb5a:4a16:eec:82b1   1.b.2.8.c.e.e.0.6.1.a.4.a.5.b.f.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.157  fe80::729d:4ea5:3e31:cf2e            Web-Lp-013._dosvc._tcp.local
+|           192.168.7.20   fc89:4a20:ad6c::f2f0:b120:34cc:47c2  2.c.7.4.c.c.4.3.0.2.1.b.0.f.2.f.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.28   fc89:4a20:ad6c::b875:d285:4590:2531  1.3.5.2.0.9.5.4.5.8.2.d.5.7.8.b.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.186  fc89:4a20:ad6c::456f:e896:5bdf:9eb3  3.b.e.9.f.d.b.5.6.9.8.e.f.6.5.4.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.52   fe80::1003:9564:5a4d:a0a6            D.E.D.1.D.E.F.3.6.3.3.B.0.F.0.1.0.0.0.0.C.6.D.A.0.2.A.4.9.8.C.F.ip6.arpa
+|           192.168.7.14   fc89:4a20:ad6c::1b5d:e6bb:f653:b274  4.7.2.b.3.5.6.f.b.b.6.e.d.5.b.1.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|           192.168.7.206  fc89:4a20:ad6c::cea2:823d:1a0c:e9a4  4.a.9.e.c.0.a.1.d.3.2.8.2.a.e.c.0.0.0.0.c.6.d.a.0.2.a.4.9.8.c.f.ip6.arpa
+|       Spotify
+|         ip
+|         192.168.7.40
+|       LLMNR
+|         ip                         query
+|         fe80::f6b7:43c7:c2ce:f716  DESKTOP-5SDD50T
+|         192.168.7.111              DESKTOP-5SDD50T
+|         fe80::54de:2936:eadb:4395  DESKTOP-R57LDCQ
+|         192.168.7.15               DESKTOP-R57LDCQ
+|         fe80::a94b:6e82:19fb:ab73  APC-AP-G2RQPB4
+|         192.168.7.239              APC-AP-G2RQPB4
+|         fe80::54ae:e4d1:f19f:b9d6  web-lp-007
+|         192.168.7.170              web-lp-007
+|         fe80::fa38:61d6:dbe5:57c3  APC-AP-23RQPB4
+|         192.168.7.248              APC-AP-23RQPB4
+|         fe80::729d:4ea5:3e31:cf2e  Web-Lp-013
+|         192.168.7.157              Web-Lp-013
+|         fe80::76c1:1686:6a12:d678  APC-AP-13RQPB4
+|         192.168.7.246              APC-AP-13RQPB4
+|         fe80::faf7:62f7:3733:95eb  APC-AP-H2RQPB4
+|_        192.168.7.241              APC-AP-H2RQPB4
+| targets-ipv6-multicast-invalid-dst: 
+|   IP: fe80::f6b7:43c7:c2ce:f716  MAC: 18c04d69e437  IFACE: enp2s0
+|   IP: fe80::262:5bb4:c92a:f156   MAC: 3c7c3f0e6aad  IFACE: enp2s0
+|   IP: fe80::3e7c:3fff:fe17:b354  MAC: 3c7c3f17b354  IFACE: enp2s0
+|   IP: fe80::1ac0:4dff:fe9c:6fcb  MAC: 18c04d9c6fcb  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0
+|   IP: fe80::9ea2:f4ff:fe26:7970  MAC: 9ca2f4267970  IFACE: enp2s0
+|   IP: fe80::f25e:9b5a:956b:63a7  MAC: e0d55e35ab9c  IFACE: enp2s0
+|   IP: fe80::c239:5aff:fe44:283a  MAC: c0395a44283a  IFACE: enp2s0
+|   IP: fe80::1227:f5ff:fe78:fef4  MAC: 1027f578fef4  IFACE: enp2s0
+|   IP: fe80::e9e6:e63b:89ca:7598  MAC: 103d1ca1349d  IFACE: enp2s0
+|   IP: fe80::446b:abbc:87b9:d4c1  MAC: 8c902dcbca87  IFACE: enp2s0
+|   IP: fe80::729d:4ea5:3e31:cf2e  MAC: 5414f35153ab  IFACE: enp2s0
+|   IP: fe80::5083:dcbf:27bc:f23f  MAC: d4548be22435  IFACE: enp2s0
+|   IP: fe80::1859:704e:1d25:2d43  MAC: fe648b30a8b0  IFACE: enp2s0
+|   IP: fe80::14ff:5f5a:32f0:806c  MAC: 149877301e85  IFACE: enp2s0
+|   IP: fe80::c739:26f2:eef1:205c  MAC: 202351c367b3  IFACE: enp2s0
+|   IP: fe80::90a5:ce63:9f06:c2e2  MAC: ac74b1f2fd9b  IFACE: enp2s0
+|   IP: fe80::1f:8eb6:aeab:2e70    MAC: 2ed29bedd4f9  IFACE: enp2s0
+|   IP: fe80::1003:9564:5a4d:a0a6  MAC: 149877580761  IFACE: enp2s0
+|   IP: fe80::c1dd:c8cc:f938:b177  MAC: 8c902dcbd9ab  IFACE: enp2s0
+|   IP: fe80::c5ba:afaa:cf1f:5627  MAC: 80b655cdb225  IFACE: enp2s0
+|   IP: fe80::19d7:f3fb:b719:ba72  MAC: 90de80d7f275  IFACE: enp2s0
+|   IP: fe80::6f76:6f77:a33f:c981  MAC: 8c902dcbd37c  IFACE: enp2s0
+|   IP: fe80::1348:efb3:4d56:cbba  MAC: 8c902dcbd8c0  IFACE: enp2s0
+|   IP: fe80::2948:fcf:2671:ad9f   MAC: e848b8c81eae  IFACE: enp2s0
+|   IP: fe80::1883:c109:a874:2dc4  MAC: 28ea2d53ce09  IFACE: enp2s0
+|   IP: fe80::f9ee:df62:58b9:8ae5  MAC: 586c25a33dd8  IFACE: enp2s0
+|   IP: fe80::7aea:c7f1:6ad2:1fce  MAC: 90de80d81334  IFACE: enp2s0
+|_  Use --script-args=newtargets to add the results as targets
+| broadcast-igmp-discovery: 
+|   192.168.7.15
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.111
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.157
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.170
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.239
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.251
+|     Description: mDNS (rfc6762)
+|   192.168.7.239
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.241
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.251
+|     Description: mDNS (rfc6762)
+|   192.168.7.241
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.246
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.248
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 224.0.0.252
+|     Description: Link-local Multicast Name Resolution (rfc4795)
+|   192.168.7.157
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 239.255.255.250
+|     Description: Organization-Local Scope (rfc2365)
+|   192.168.7.239
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 239.255.255.250
+|     Description: Organization-Local Scope (rfc2365)
+|   192.168.7.246
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 239.255.255.250
+|     Description: Organization-Local Scope (rfc2365)
+|   192.168.7.248
+|     Interface: enp2s0
+|     Version: 2
+|     Group: 239.255.255.250
+|     Description: Organization-Local Scope (rfc2365)
+|_  Use the newtargets script-arg to add the results as targets
+| targets-ipv6-multicast-slaac: 
+|   IP: fe80::aca7:2ede:701d:29dc  MAC: e0d55e35ab9c  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fe1b:95de  MAC: bc24111b95de  IFACE: enp2s0
+|   IP: fe80::10bb:36f6:4ed5:dfed  MAC: 2ed29bedd4f9  IFACE: enp2s0
+|   IP: fe80::10f0:b336:3fed:1ded  MAC: 149877580761  IFACE: enp2s0
+|   IP: fe80::5b53:ec04:f60e:966a  MAC: 8c902dcbd0aa  IFACE: enp2s0
+|   IP: fe80::bc72:962b:5d2f:aa18  MAC: 8c902dcbd0aa  IFACE: enp2s0
+|   IP: fe80::f2f0:b120:34cc:47c2  MAC: 8c902dcbd9ab  IFACE: enp2s0
+|   IP: fe80::fb5a:4a16:eec:82b1   MAC: 8c902dcbd8c0  IFACE: enp2s0
+|   IP: fe80::be24:11ff:fea5:8107  MAC: bc2411a58107  IFACE: enp2s0
+|   IP: fe80::97fb:87be:b14b:f1de  MAC: fc6d777b3a3b  IFACE: enp2s0
+|   IP: fe80::8417:4189:706a:9089  MAC: fc6d777b3a3b  IFACE: enp2s0
+|   IP: fe80::9b2b:6111:7c9d:3a6   MAC: 103d1ca1349d  IFACE: enp2s0
+|   IP: fe80::b835:193:2fea:ffc9   MAC: 5414f35153ab  IFACE: enp2s0
+|   IP: fe80::62e9:d4b4:1685:b783  MAC: fc6d777c8e2c  IFACE: enp2s0
+|   IP: fe80::c0cb:dd9:702e:e765   MAC: fc6d777c8e2c  IFACE: enp2s0
+|   IP: fe80::ad5a:4670:5ab9:2529  MAC: 18c04d69e437  IFACE: enp2s0
+|   IP: fe80::39fa:f3b3:63ba:a510  MAC: 18c04d69e437  IFACE: enp2s0
+|   IP: fe80::2b68:155f:6bd:32a3   MAC: fc6d777c8e8b  IFACE: enp2s0
+|   IP: fe80::60fc:19ed:ec09:cef7  MAC: fc6d777c8e8b  IFACE: enp2s0
+|   IP: fe80::70f4:4c54:2c72:4416  MAC: 9843fa73cfc1  IFACE: enp2s0
+|   IP: fe80::25fb:7298:bea1:de99  MAC: 9843fa73cfc1  IFACE: enp2s0
+|   IP: fe80::a008:27a9:1c18:ab65  MAC: 8c902dcbca87  IFACE: enp2s0
+|   IP: fe80::7cd0:9c59:919e:d681  MAC: 5414f35153ab  IFACE: enp2s0
+|   IP: fe80::9290:1571:cdb9:e12e  MAC: 3c7c3f0e6aad  IFACE: enp2s0
+|   IP: fe80::bdbc:a0a1:5bfc:3ebb  MAC: 90de80d81334  IFACE: enp2s0
+|   IP: fe80::3e66:52b2:d43:2adb   MAC: 8c902dcbd8c0  IFACE: enp2s0
+|   IP: fe80::50ac:37be:dda8:b866  MAC: 103d1ca1349d  IFACE: enp2s0
+|   IP: fe80::9a1c:c792:b71f:83f8  MAC: 586c25a33dd8  IFACE: enp2s0
+|   IP: fe80::a537:788e:a19:48d7   MAC: 90de80d7f275  IFACE: enp2s0
+|   IP: fe80::396c:748:4f79:f941   MAC: fc6d777c8e7c  IFACE: enp2s0
+|   IP: fe80::55ef:f95a:68c9:4     MAC: fc6d777c8e7c  IFACE: enp2s0
+|   IP: fe80::de89:388e:6b42:c166  MAC: e0d55e35ab9c  IFACE: enp2s0
+|   IP: fe80::4925:7b32:ce0d:8f1a  MAC: 90de80d80321  IFACE: enp2s0
+|   IP: fe80::159b:28e0:fad7:fcf1  MAC: 90de80d80321  IFACE: enp2s0
+|   IP: fe80::456f:e896:5bdf:9eb3  MAC: 586c25a33dd8  IFACE: enp2s0
+|   IP: fe80::434e:19e4:dc9e:850   MAC: 18c04d9c6fcb  IFACE: enp2s0
+|   IP: fe80::8f20:e3bb:d2c6:ec10  MAC: 202351c367b3  IFACE: enp2s0
+|   IP: fe80::7984:a03b:9904:cb69  MAC: e848b8c81eae  IFACE: enp2s0
+|   IP: fe80::ef8c:63e3:8d25:4498  MAC: 8c902dcbd9ab  IFACE: enp2s0
+|   IP: fe80::9a0e:38c1:907a:3b85  MAC: 8c902dcbca87  IFACE: enp2s0
+|   IP: fe80::3b56:8d6b:a275:228   MAC: 202351c367b3  IFACE: enp2s0
+|   IP: fe80::35e2:770e:e6bc:7d16  MAC: 8c902dcbd37c  IFACE: enp2s0
+|   IP: fe80::c231:6440:7258:fd93  MAC: 80b655cdb225  IFACE: enp2s0
+|   IP: fe80::cea2:823d:1a0c:e9a4  MAC: e848b8c81eae  IFA

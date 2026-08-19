@@ -28,7 +28,7 @@ RUN git clone --depth 1 https://github.com/drwetter/testssl.sh.git /usr/local/te
     && ln -s /usr/local/testssl/testssl.sh /usr/local/bin/testssl.sh
 
 # ── Trivy (direct download from GitHub releases) ──
-ARG TRIVY_VERSION=0.73.0
+ARG TRIVY_VERSION=0.74.0
 RUN curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
       | tar xz -C /usr/local/bin
 

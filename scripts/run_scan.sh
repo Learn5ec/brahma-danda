@@ -12,17 +12,28 @@ HOST_LABEL="${HOSTNAME_OVERRIDE:-$(cat /host/etc/hostname 2>/dev/null || echo un
 echo "[run_scan] starting scan of ${HOST_LABEL} at ${TS}"
 
 # ── 1. Trivy — OS package + known-CVE scan against the mounted host root ──
-# Pre-create trivy cache dir — /home/brahmadanda/.cache is a tmpfs owned by root
-# so trivy (running as brahmadanda) can't mkdir inside it. Also ensure /tmp/trivy
-# is writable since some trivy versions fall back to ~/.cache/trivy.
-mkdir -p /home/brahmadanda/.cache/trivy 2>/dev/null || true
-mkdir -p /tmp/trivy 2>/dev/null || true
+# Both the vuln DB and Java DB are stored in the persistent trivy_cache volume
+# at /root/.cache/trivy. Neither will re-download on container restarts.
+mkdir -p /root/.cache/trivy 2>/dev/null || true
+
+# Pre-download Java DB if not already cached (one-time, ~907 MB).
+# Stored in persistent volume so restarts/rebuilds won't re-fetch it.
+if [ ! -f "/root/.cache/trivy/java-db/trivy-java.db" ]; then
+  echo "[run_scan] Java DB not found in cache — downloading once (this takes ~15m)..."
+  trivy image --download-java-db-only --cache-dir /root/.cache/trivy 2>&1 | tail -5 || true
+  echo "[run_scan] Java DB download complete, stored persistently."
+else
+  echo "[run_scan] Java DB already cached — skipping download."
+fi
+
 echo "[run_scan] running trivy rootfs scan..."
 trivy rootfs /host \
   --format json \
   --severity CRITICAL,HIGH,MEDIUM \
+  --pkg-types os \
   --scanners vuln \
-  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker,/host/root/.gnupg \
+  --skip-version-check \
+  --skip-dirs /host/proc,/host/sys,/host/dev,/host/tmp,/host/var/lib/docker,/host/root,/host/var/lib,/host/etc/ssh,/host/etc/ssl,/host/var/log,/host/var/ossec \
   --timeout 30m \
   --output "${REPORT_DIR}/trivy.json" \
   2> "${REPORT_DIR}/trivy.stderr.log" \

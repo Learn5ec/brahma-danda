@@ -5,9 +5,9 @@ services:
     image: alpine:3.20
     user: "0"
     volumes:
-      - trivy_cache:/home/brahmadanda/.cache/trivy
+      - trivy_cache:/root/.cache/trivy
       - scan_reports:/app/reports
-    command: ["sh", "-c", "chown -R 0:0 /home/brahmadanda/.cache/trivy /app/reports"]
+    command: ["sh", "-c", "chown -R 0:0 /root/.cache/trivy /app/reports"]
     tmpfs: []
 
   brahmadanda:
@@ -27,8 +27,7 @@ services:
     volumes:
       - /:/host:ro
       - scan_reports:/app/reports
-      - ./reports/latest:/app/reports/latest:rw       # host-side test dir (iterative prompt work)
-      - trivy_cache:/home/brahmadanda/.cache/trivy   # persistent vuln DB cache
+      - trivy_cache:/root/.cache/trivy   # persistent vuln DB cache — survives restarts
 
     # ⚠️ TRADE-OFF, not a default we make silently: nmap needs to see the
     #    HOST's real network namespace to report the host's actual open
@@ -49,12 +48,15 @@ services:
     cap_add:
       - NET_RAW
       - NET_ADMIN
+      - DAC_READ_SEARCH
+      - DAC_OVERRIDE
     read_only: true          # container's OWN filesystem is still read-only
     tmpfs:
       - /tmp
       - /home/brahmadanda/.cache
-      - /root/.cache
-      - /root
+      - /root            # /root itself is tmpfs but /root/.cache/trivy is a named volume
+      - /run            # ufw needs to write /run/ufw.lock
+      - /var/spool      # cron needs /var/spool/cron/ for spool files
 
     environment:
       # Non-secret config only. Actual credentials come from `secrets:` below.
@@ -79,9 +81,9 @@ services:
       # Ollama takes precedence over ANTHROPIC_* if both are set.
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder-v2:16b}
-      # ── Trivy cache — tmpfs is world-writable (1777), needed because we
-      #    run without CAP_CHOWN and can't fix /home/brahmadanda/.cache perm. ──
-      - TRIVY_HOME=/tmp
+      # ── Trivy cache — points to the persistent trivy_cache named volume
+      #    so the vuln DB survives container restarts/rebuilds.
+      - TRIVY_CACHE_DIR=/root/.cache/trivy
 
     # ✅ Secrets mounted as files at /run/secrets/<name>, never as env vars
     #    (env vars leak via `docker inspect` / `ps`; files with 0400 perms don't).
@@ -93,7 +95,7 @@ services:
       resources:
         limits:
           cpus: "2.0"
-          memory: 4G
+          memory: 8G
 
 secrets:
   slack_bot_token:

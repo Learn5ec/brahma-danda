@@ -391,6 +391,23 @@ def split_file(file_path: Path, max_size: int) -> list[Path]:
     return chunks
 
 
+def get_tool_updates(report_dir: Path) -> str:
+    """Check logs for tool updates (e.g. Trivy) and format an alert message."""
+    updates = []
+    trivy_log = report_dir / "trivy.stderr.log"
+    if trivy_log.exists():
+        content = trivy_log.read_text(errors="replace")
+        m = re.search(r"Version ([\d\.]+) of Trivy is now available, current version is ([\d\.]+)", content)
+        if m:
+            latest = m.group(1)
+            current = m.group(2)
+            updates.append(f"Update available for Trivy\ncurrent version: {current}\nlatest-version-available: {latest}")
+    
+    if updates:
+        return "\n\n" + "\n\n".join(updates)
+    return ""
+
+
 def upload_file_to_slack(channel: str, file_path: Path, title: str,
                          host: str = "", thread_ts: str | None = None) -> bool:
     """Upload a file to Slack (3-step External Upload API).
@@ -497,13 +514,14 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
 
     # Announce that scan files follow in the thread
     if thread_ts:
+        updates_text = get_tool_updates(report_dir)
         requests.post(
             "https://slack.com/api/chat.postMessage",
             headers=headers,
             json={
                 "channel": channel,
                 "thread_ts": thread_ts,
-                "text": ":paperclip: Raw scan reports are attached in this thread for reviewer reference.",
+                "text": f":paperclip: Raw scan reports are attached in this thread for reviewer reference.{updates_text}",
             },
             timeout=30,
         )
@@ -544,6 +562,7 @@ def post_raw_reports_to_slack(channel: str, report_dir: Path, host: str) -> None
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
 
+    updates_text = get_tool_updates(report_dir)
     msg_resp = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers=headers,
@@ -556,7 +575,7 @@ def post_raw_reports_to_slack(channel: str, report_dir: Path, host: str) -> None
                     "text": (
                         f":warning: *Security scan complete for `{host}`*\n\n"
                         "LLM summary could not be generated. "
-                        "Raw scan reports are attached in this thread for reviewer reference."
+                        f"Raw scan reports are attached in this thread for reviewer reference.{updates_text}"
                     ),
                 }},
                 {"type": "divider"},
