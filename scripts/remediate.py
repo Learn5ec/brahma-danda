@@ -9,6 +9,7 @@ import argparse
 import datetime
 import json
 import os
+import random
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -16,6 +17,13 @@ from pathlib import Path
 
 import requests
 from anthropic import Anthropic
+
+# Playful fallback messages when LLM is unavailable
+LLM_FALLBACK_MESSAGES = [
+    "Looks like the Summarizer Agent is taking a well-deserved vacation. 😎 Guess it's time for us to roll up our sleeves and manually analyse the reports for vulnerabilities. The raw reports are attached in the thread below—fresh from the source, zero summarization, maximum adventure. 🔍🫡",
+    "The Summarizer Agent appears to be MIA. 🫡 No worries—manual vulnerability hunting it is! The raw reports are waiting for us in the thread below, ready to be lovingly combed through the old-fashioned way. 😄",
+    "Summarizer Agent is currently unavailable. Please enjoy this exciting new feature: **doing it yourself**™. 😄 The raw reports are attached in the thread below—because apparently, today we're choosing the *hands-on* experience. 🔎",
+]
 
 from prompts import (
     SYSTEM_PROMPT,
@@ -548,6 +556,53 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
             chunk.unlink(missing_ok=True)
 
 
+def post_fallback_to_slack(channel: str, fallback_msg: str, report_dir: Path, host: str) -> None:
+    """Post playful fallback message with raw scan files in thread."""
+    token = read_secret("slack_bot_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    updates_text = get_tool_updates(report_dir)
+    msg_resp = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers=headers,
+        json={
+            "channel": channel,
+            "text": f":robot_face: Security scan complete for {host} — LLM on break, raw reports in thread",
+            "blocks": [
+                {"type": "section", "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f":shield: *Security scan complete for `{host}`*\n\n"
+                        f"_{fallback_msg}_\n\n"
+                        f"_Raw scan reports are attached in this thread for reviewer reference.{updates_text}_"
+                    ),
+                }},
+                {"type": "divider"},
+            ],
+        },
+        timeout=30,
+    )
+    msg_resp.raise_for_status()
+    thread_ts = msg_resp.json().get("ts")
+
+    # ── Thread: raw scan artefacts ──
+    MAX_CHUNK_SIZE = 50 * 1024 * 1024  # 50 MB
+    for raw_file in [
+        "trivy.json", "debsecan.txt", "combined_meta.json", "nmap.xml", "nmap.txt",
+        "ss_listeners.txt", "ufw_status.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
+    ]:
+        fpath = report_dir / raw_file
+        if not fpath.exists():
+            continue
+        chunks = split_file(fpath, MAX_CHUNK_SIZE)
+        for i, chunk in enumerate(chunks, 1):
+            title = raw_file if len(chunks) == 1 else f"{raw_file}.{i:03d}"
+            success = upload_file_to_slack(channel, chunk, title, host, thread_ts=thread_ts)
+            if not success:
+                print(f"[remediate] ⚠️  failed to upload {title}", file=sys.stderr)
+            chunk.unlink(missing_ok=True)
+
+
 def copy_reports_to_local(report_dir: Path, host: str) -> Path:
     """Copy all raw reports to ~/Downloads/brahma-danda_reports/ for local access."""
     import shutil
@@ -640,13 +695,16 @@ def main():
     # ── Step 3: post to Slack (or fallback) ──
     if threat_brief is None:
         print("[remediate] ⚠️  LLM unavailable — no summary generated")
+        # Pick a random playful fallback message
+        fallback_msg = random.choice(LLM_FALLBACK_MESSAGES)
+        print(f"[remediate] Using fallback message: {fallback_msg}")
         try:
             copy_reports_to_local(report_dir, args.host)
         except OSError:
             pass  # container filesystem is read-only; reports stay on scan_reports volume
-        print(f"[remediate] posting raw reports to Slack channel {channel}")
-        post_raw_reports_to_slack(channel, report_dir, args.host)
-        print("[remediate] done (raw reports only)")
+        print(f"[remediate] posting fallback message + raw reports to Slack channel {channel}")
+        post_fallback_to_slack(channel, fallback_msg, report_dir, args.host)
+        print("[remediate] done (raw reports with fallback message)")
         return
 
     plan_path = report_dir / "remediation_plan.md"
