@@ -1,8 +1,45 @@
 # brahma-danda
 
-A containerized agent that scans **the server it's deployed on**, runs monthly,
-and posts a Claude-generated, priority-ordered remediation plan to Slack —
-along with the raw scan data.
+> The Brahmadanda is a supreme divine staff created by Lord Brahma. Unlike
+> offensive celestial weapons meant for destruction, it functions as an
+> absolute defensive shield. Accessible exclusively through immense spiritual
+> power, it represents the ultimate authority of cosmic law and righteousness.
+
+**Brahma-Danda** draws its name and philosophy from this divine staff. Just as
+the Brahmadanda absorbs and neutralizes any celestial attack without firing a
+single blow, this tool stands as a **purely defensive** security layer for
+your servers. It doesn't patch, exploit, or modify anything on the host —
+it only observes, analyzes, and reports.
+
+**Core Principles (inspired by the divine staff):**
+
+- **Pure Defense Only:** Like Vashistha using the Brahmadanda to neutralize
+  the Brahmastra, this agent detects and repels threats through observation
+  alone. Zero offensive capabilities. Zero host modifications. The host
+  filesystem is mounted **read-only** (`/:/host:ro`). The agent can audit
+  but never alter.
+
+- **Absorbs Any Attack:** Whether it's CVEs from Trivy, config drift from
+  Lynis, open ports from nmap, or misconfigured SSH/nginx/Docker — all scan
+  data flows into one pipeline. Like the Brahmadanda absorbing the Brahmastra,
+  every attack vector is detected, categorized, and reported before it
+  becomes an incident.
+
+- **Authority of Cosmic Law:** The agent enforces security best practices
+  (NIST, CIS benchmarks, vendor hardening guides) as its "cosmic law."
+  Findings are ranked by severity so the human reviewer can prioritize
+  remediation with full context.
+
+## What it actually checks
+
+| Tool | What it does | Why |
+|---|---|---|
+| **Trivy** (`rootfs` scan) | OS package CVEs against the real installed versions | Primary source of truth — matches actual patch level, not just a version banner |
+| **debsecan** | Debian security-tracker cross-check | Best-effort secondary check. On Ubuntu hosts this is *not* authoritative (Ubuntu maintains its own patch levels) — Trivy wins if they disagree |
+| **SSH config check** | `PermitRootLogin`, `PasswordAuthentication`, `LoginGraceTime`, `MaxAuthTries`, `X11Forwarding` | Config-level hardening, not just CVEs |
+| **nginx config check** | HSTS, CSP, `X-Frame-Options`, `server_tokens`, TLS version, rate limiting | Same, for the web layer |
+| **nmap** (self-scan, NSE scripts) | Real open ports on this host + CVE-detection scripts, `default,safe,vuln,auth,version,malware` categories + behavioral probes | Same category of check as your original manual scan — Claude is prompted to flag distro-backport false positives instead of trusting the banner |
+| **Claude / Ollama** | Reads all of the above, writes the prioritized plan | Turns raw tool output into "fix this first, here's the exact command" |
 
 ## What it actually checks
 
