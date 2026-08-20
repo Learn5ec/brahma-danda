@@ -213,6 +213,37 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 LLM_OK=false
 
+# Function to test connection and handle failures gracefully
+test_llm_connection() {
+    local backend_name="$1"
+    local response="$2"
+    local pattern="$3"
+    local failure_message="$4"
+
+    if echo "$response" | grep -qi "$pattern"; then
+        echo "  ✓ $backend_name connection successful!"
+        LLM_OK=true
+        return 0
+    else
+        echo ""
+        echo "  ✗ $backend_name connection failed."
+        echo ""
+        echo "  $failure_message"
+        echo ""
+        echo "  Options:"
+        echo "    1. Press Enter to continue (LLM features will be unavailable)"
+        echo "    2. Type 'q' to quit setup and fix the configuration"
+        echo ""
+        read -r -p "  Continue? (Enter/q): " choice
+        if [ "$choice" = "q" ] || [ "$choice" = "Q" ]; then
+            echo ""
+            echo "  Setup aborted. Fix the configuration and run setup.sh again."
+            exit 1
+        fi
+        return 1
+    fi
+}
+
 # Test based on which LLM backend is configured
 # Priority: Ollama (if configured as primary) > Anthropic gateway > Anthropic API
 if [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] && [ -z "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ]; then
@@ -227,13 +258,9 @@ if [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] &&
         -H "x-api-key: ${AUTH_TOKEN}" \
         -H "anthropic-version: 2023-06-01" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
-    if echo "$RESPONSE" | grep -qi '"content"'; then
-        echo "  ✓ Anthropic gateway connection successful!"
-        LLM_OK=true
-    else
-        echo "  ✗ Anthropic gateway connection failed. Response: $RESPONSE"
-        exit 1
-    fi
+    test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
+        "Check: Base URL is reachable, auth token is valid, gateway accepts connections"
+
 elif [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] && [ -n "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ]; then
     # Custom gateway + Ollama fallback (option 5) - test primary first
     BASE_URL=$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)
@@ -246,24 +273,19 @@ elif [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] 
         -H "x-api-key: ${AUTH_TOKEN}" \
         -H "anthropic-version: 2023-06-01" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
-    if echo "$RESPONSE" | grep -qi '"content"'; then
-        echo "  ✓ Anthropic gateway connection successful!"
-        LLM_OK=true
-    else
-        echo "  ⚠ Anthropic gateway failed. Testing Ollama fallback..."
+    test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
+        "Gateway failed. Testing Ollama fallback..."
+    if [ "$LLM_OK" = false ]; then
         OLLAMA_URL=$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)
         OLLAMA_MODEL=$(grep -v '^#' .env | grep '^OLLAMA_MODEL=' | cut -d= -f2-)
+        echo "  Testing Ollama fallback at ${OLLAMA_URL}..."
         RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 "${OLLAMA_URL}/api/chat" \
             -H "Content-Type: application/json" \
             -d "{\"model\":\"${OLLAMA_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}],\"stream\":false}" 2>&1)
-        if echo "$RESPONSE" | grep -qi '"message"'; then
-            echo "  ✓ Ollama fallback connection successful!"
-            LLM_OK=true
-        else
-            echo "  ✗ Both Anthropic and Ollama failed."
-            exit 1
-        fi
+        test_llm_connection "Ollama fallback" "$RESPONSE" '"message"' \
+            "Check: Ollama URL is correct, model is pulled, Ollama is running (ollama ls)"
     fi
+
 elif [ -n "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ] && [ ! -f secrets/claude_api_key.txt ]; then
     # Pure Ollama (option 3)
     OLLAMA_URL=$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)
@@ -272,17 +294,9 @@ elif [ -n "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ] && 
     RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 "${OLLAMA_URL}/api/chat" \
         -H "Content-Type: application/json" \
         -d "{\"model\":\"${OLLAMA_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}],\"stream\":false}" 2>&1)
-    if echo "$RESPONSE" | grep -qi '"message"'; then
-        echo "  ✓ Ollama connection successful!"
-        LLM_OK=true
-    else
-        echo "  ✗ Ollama connection failed. Response: $RESPONSE"
-        echo "  Please check:"
-        echo "    - The Ollama URL is correct and reachable"
-        echo "    - The model is pulled (ollama pull ${OLLAMA_MODEL})"
-        echo "    - Ollama is running (ollama ls)"
-        exit 1
-    fi
+    test_llm_connection "Ollama" "$RESPONSE" '"message"' \
+        "Check: Ollama URL is reachable, model is pulled (ollama pull ${OLLAMA_MODEL}), Ollama is running (ollama ls)"
+
 elif [ -f secrets/claude_api_key.txt ] && [ -n "$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)" ]; then
     # API key + Ollama fallback (option 4) - test primary first
     API_KEY=$(cat secrets/claude_api_key.txt)
@@ -294,24 +308,19 @@ elif [ -f secrets/claude_api_key.txt ] && [ -n "$(grep -v '^#' .env | grep '^OLL
         -H "x-api-key: ${API_KEY}" \
         -H "anthropic-version: 2023-06-01" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
-    if echo "$RESPONSE" | grep -qi '"content"'; then
-        echo "  ✓ Anthropic API connection successful!"
-        LLM_OK=true
-    else
-        echo "  ⚠ Anthropic API failed. Testing Ollama fallback..."
+    test_llm_connection "Anthropic API" "$RESPONSE" '"content"' \
+        "Check: API key is valid, account has credits. Testing Ollama fallback..."
+    if [ "$LLM_OK" = false ]; then
         OLLAMA_URL=$(grep -v '^#' .env | grep '^OLLAMA_BASE_URL=' | cut -d= -f2-)
         OLLAMA_MODEL=$(grep -v '^#' .env | grep '^OLLAMA_MODEL=' | cut -d= -f2-)
+        echo "  Testing Ollama fallback at ${OLLAMA_URL}..."
         RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 "${OLLAMA_URL}/api/chat" \
             -H "Content-Type: application/json" \
             -d "{\"model\":\"${OLLAMA_MODEL}\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}],\"stream\":false}" 2>&1)
-        if echo "$RESPONSE" | grep -qi '"message"'; then
-            echo "  ✓ Ollama fallback connection successful!"
-            LLM_OK=true
-        else
-            echo "  ✗ Both Anthropic and Ollama failed."
-            exit 1
-        fi
+        test_llm_connection "Ollama fallback" "$RESPONSE" '"message"' \
+            "Check: Ollama URL is correct, model is pulled, Ollama is running (ollama ls)"
     fi
+
 elif [ -f secrets/claude_api_key.txt ]; then
     # Pure Anthropic API (option 1)
     API_KEY=$(cat secrets/claude_api_key.txt)
@@ -323,13 +332,9 @@ elif [ -f secrets/claude_api_key.txt ]; then
         -H "x-api-key: ${API_KEY}" \
         -H "anthropic-version: 2023-06-01" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
-    if echo "$RESPONSE" | grep -qi '"content"'; then
-        echo "  ✓ Anthropic API connection successful!"
-        LLM_OK=true
-    else
-        echo "  ✗ Anthropic API connection failed. Response: $RESPONSE"
-        exit 1
-    fi
+    test_llm_connection "Anthropic API" "$RESPONSE" '"content"' \
+        "Check: API key is valid, account has credits. Consider using options 3-5 with Ollama if Anthropic is unavailable."
+
 else
     echo "  ⚠ No LLM backend configured — skipping LLM check."
     echo "  You can re-run setup.sh later to configure an LLM backend."
