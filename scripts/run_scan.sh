@@ -103,9 +103,13 @@ if [ "${NMAP_SELF_SCAN:-true}" = "true" ]; then
   # No 'vuln' category — it's banner-grabbing CVE matching, a known source of
   # false positives on distro-packaged software. Trivy already does evidence-based
   # CVE detection from the package DB. We use behavioral probes instead.
-  NMAP_CATEGORIES="${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe}"
-  NMAP_EXTRA="${NMAP_EXTRA_SCRIPTS:-ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods}"
-  NMAP_ALL="${NMAP_CATEGORIES},${NMAP_EXTRA}"
+  NMAP_CATEGORIES="${NMAP_SCRIPT_CATEGORIES:-default,safe,vuln,auth,version,malware}"
+  NMAP_EXTRA="${NMAP_EXTRA_SCRIPTS:-}"  # Dynamic: reads from .env, empty by default in fallback
+  if [ -n "$NMAP_EXTRA" ]; then
+    NMAP_ALL="${NMAP_CATEGORIES},${NMAP_EXTRA}"
+  else
+    NMAP_ALL="${NMAP_CATEGORIES}"
+  fi
   if [ "${NMAP_ALLOW_INTRUSIVE:-false}" = "true" ]; then
     echo "[run_scan] ⚠️ NMAP_ALLOW_INTRUSIVE=true — including exploit,dos,brute,fuzzer scripts"
     echo "[run_scan] ⚠️ this WILL actively attack services on this host, confirm maintenance window"

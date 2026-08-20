@@ -17,14 +17,12 @@ generate in a single response.  Callers choose this per-call:
   • COMBINE pass   → 8 192 output tokens; a busy host with many Critical/High
     findings can produce a long Threat Brief, and we never want it truncated.
 
-Adjust MAX_TOKENS_PER_FILE / MAX_TOKENS_COMBINE here if you need to tune.
+Adjust MAX_TOKENS_PER_FILE here if you need to tune.
 """
 
 MAX_TOKENS_PER_FILE: int = 2_048   # JSON findings from one artefact
-MAX_TOKENS_COMBINE: int = 8_192    # Final merged Threat Brief (raised from 4096
-                                    # to avoid truncation on noisy hosts)
-MAX_RAW_CHARS_PER_FILE: int = 60_000  # Input truncation guard — keeps per-file
-                                        # prompts well inside the 128k context window
+# MAX_TOKENS_COMBINE and MAX_RAW_CHARS_PER_FILE removed — dynamic chunking
+# handles input sizing at runtime; no hardcoded limits remain.
 
 
 # ── Per-file extraction prompt ────────────────────────────────────────────────
