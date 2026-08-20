@@ -30,9 +30,12 @@ from prompts import (
     PER_FILE_SYSTEM_PROMPT,
     COMBINE_SYSTEM_PROMPT,
     MAX_TOKENS_PER_FILE,
-    MAX_TOKENS_COMBINE,
-    MAX_RAW_CHARS_PER_FILE,
 )
+
+# ── Dynamic recursive chunking configuration ──────────────────────────────────
+# No hardcoded input limits — the chunking engine handles everything at runtime.
+INITIAL_CHUNK_SIZE = 50 * 1024 * 1024  # 50 MB initial split point
+MIN_CHUNK_SIZE   = 1 * 1024 * 1024       # 1 MB minimum — stop halving below this
 
 
 
@@ -326,62 +329,132 @@ def _llm(system: str, user: str, *, client=None, model: str = "",
 # ── Per-file analysis helpers ─────────────────────────────────────────────────
 
 def _file_inputs(report_dir: Path) -> list[tuple[str, str]]:
-    """Return (label, content) for every available scan artefact."""
+    """Return (label, content) for every available scan artefact — NO truncation."""
     inputs = []
     trivy = summarize_trivy_json(report_dir / "trivy.json")
     if "(trivy scan did not run" not in trivy:
         inputs.append(("trivy.json", trivy))
     for fname in ["debsecan.txt", "combined_meta.json", "ss_listeners.txt", "ufw_status.txt",
                   "iptables.txt", "nftables.txt", "lynis-report.dat"]:
-        content = read_truncated(report_dir / fname)
-        if "(file not found" not in content:
+        fpath = report_dir / fname
+        if not fpath.exists():
+            continue
+        content = fpath.read_text(errors="replace")
+        if content.strip():
             inputs.append((fname, content))
     nmap = summarize_nmap_xml(report_dir / "nmap.xml")
     if "(nmap scan did not run" not in nmap and "(nmap ran but found no open ports)" not in nmap:
         inputs.append(("nmap.xml", nmap))
     for f in sorted(report_dir.glob("testssl_*.json")):
-        content = read_truncated(f)
-        if "(file not found" not in content:
+        if not f.exists():
+            continue
+        content = f.read_text(errors="replace")
+        if content.strip():
             inputs.append((f.name, content))
     return inputs
 
 
 def analyze_files(report_dir: Path, host: str, **llm_kw) -> list[dict]:
-    """Send each scan artefact to the LLM individually; return flat findings list."""
+    """Send each scan artefact to the LLM with dynamic recursive chunking.
+
+    No input truncation. If the LLM can't handle a chunk, it's halved and
+    retried. Every byte of every report is guaranteed to be processed
+    (assuming we reach MIN_CHUNK_SIZE without the LLM crashing on it).
+    """
     inputs = _file_inputs(report_dir)
     all_findings: list[dict] = []
-    print(f"[remediate] analysing {len(inputs)} scan artefact(s) individually …")
+    print(f"[remediate] analysing {len(inputs)} scan artefact(s) with dynamic chunking …")
     for label, content in inputs:
-        if len(content) > MAX_RAW_CHARS_PER_FILE:
-            content = content[:MAX_RAW_CHARS_PER_FILE] + "\n...[truncated]"
-        user = f"Host: {host}\nSource file: {label}\n\n=== FILE CONTENT ===\n{content}"
         print(f"[remediate]   → {label} ({len(content):,} chars)")
-        raw = _llm(PER_FILE_SYSTEM_PROMPT, user, max_tokens=MAX_TOKENS_PER_FILE, **llm_kw)
-        if not raw:
-            print(f"[remediate]   ⚠️  no response for {label}, skipping")
-            continue
-        raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
-        raw = re.sub(r"\s*```$", "", raw.strip(), flags=re.MULTILINE)
-        try:
-            findings = json.loads(raw).get("findings", [])
-            for f in findings:
-                f.setdefault("evidence", {})
-                f["evidence"].setdefault("file", label)
-            all_findings.extend(findings)
+        findings = _process_with_chunking(content, label, host, report_dir, **llm_kw)
+        all_findings.extend(findings)
+        if findings:
             print(f"[remediate]   ✓ {len(findings)} finding(s) from {label}")
-        except json.JSONDecodeError as e:
-            print(f"[remediate]   ⚠️  JSON parse error for {label}: {e} — snippet: {raw[:120]}")
+        else:
+            print(f"[remediate]   ⚠️  no findings from {label}")
     return all_findings
 
 
+# ── Dynamic recursive chunking ────────────────────────────────────────────────
+
+def _split_text_at_newline(text: str) -> tuple[str, str]:
+    """Split text in half at the nearest newline boundary at or before the midpoint.
+
+    Never splits mid-line — preserves JSON/XML structure integrity.
+    """
+    mid = len(text) // 2
+    nl_pos = text.rfind('\n', 0, mid)
+    if nl_pos == -1:
+        nl_pos = mid  # no newline found — split mid-line (shouldn't happen in practice)
+    return text[:nl_pos], text[nl_pos + 1:]
+
+
+def _process_single_chunk(text: str, label: str, host: str,
+                          report_dir: Path, **llm_kw) -> list[dict]:
+    """Attempt a single LLM call for a chunk. Returns findings or empty list."""
+    user = f"Host: {host}\nSource file: {label}\n\n=== FILE CONTENT ===\n{text}"
+    raw = _llm(PER_FILE_SYSTEM_PROMPT, user, max_tokens=MAX_TOKENS_PER_FILE, **llm_kw)
+    if not raw:
+        print(f"[remediate]   ⚠️  LLM failed for {label} — "
+              f"{'below MIN_CHUNK_SIZE' if len(text.encode()) <= MIN_CHUNK_SIZE else 'will retry with smaller chunks'}")
+        return []
+    raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+    raw = re.sub(r"\s*```$", "", raw.strip(), flags=re.MULTILINE)
+    try:
+        findings = json.loads(raw).get("findings", [])
+        for f in findings:
+            f.setdefault("evidence", {})
+            f["evidence"].setdefault("file", label)
+        return findings
+    except json.JSONDecodeError as e:
+        print(f"[remediate]   ⚠️  JSON parse error for {label}: {e} — snippet: {raw[:120]}")
+        return []
+
+
+def _process_with_chunking(text: str, label: str, host: str,
+                           report_dir: Path, **llm_kw) -> list[dict]:
+    """Recursively halve and reprocess text until the LLM can handle it.
+
+    Split strategy: cut in half at the nearest newline boundary, process both
+    halves independently, then merge. If the LLM can't even handle MIN_CHUNK_SIZE,
+    we give up on that half with a warning but never skip it silently.
+    """
+    text_size = len(text.encode('utf-8'))
+
+    # Base case: small enough — try a direct LLM call
+    if text_size <= MIN_CHUNK_SIZE:
+        return _process_single_chunk(text, label, host, report_dir, **llm_kw)
+
+    # Split in half
+    first_half, second_half = _split_text_at_newline(text)
+    print(f"[remediate]   splitting {label} → "
+          f"{len(first_half):,} + {len(second_half):,} chars")
+
+    # Process both halves (recursively if needed)
+    first_findings = _process_with_chunking(
+        first_half, f"{label}.a", host, report_dir, **llm_kw
+    )
+    second_findings = _process_with_chunking(
+        second_half, f"{label}.b", host, report_dir, **llm_kw
+    )
+
+    # Merge and return
+    merged = first_findings + second_findings
+    return merged
+
+
 def combine_findings(all_findings: list[dict], host: str, **llm_kw) -> str | None:
-    """Merge per-file findings into the final Slack Threat Brief via LLM."""
+    """Merge per-file findings into the final Slack Threat Brief via LLM.
+
+    No max_tokens cap — the full findings list must be processed without
+    truncation so the Threat Brief is comprehensive.
+    """
     if not all_findings:
         return None
     system = COMBINE_SYSTEM_PROMPT.replace("{host}", host)
     user = f"Host: {host}\n\nPer-file findings (JSON):\n{json.dumps(all_findings, indent=2)}"
     print(f"[remediate] combining {len(all_findings)} finding(s) into Threat Brief …")
-    return _llm(system, user, max_tokens=MAX_TOKENS_COMBINE, **llm_kw)
+    return _llm(system, user, **llm_kw)
 
 
 

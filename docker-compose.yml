@@ -68,7 +68,8 @@ services:
       # Safe by default: detection scripts only. See README before widening —
       # dos/exploit/brute/fuzzer categories actively attack the host they run on.
       - NMAP_SELF_SCAN=${NMAP_SELF_SCAN:-true}
-      - NMAP_SCRIPT_CATEGORIES=${NMAP_SCRIPT_CATEGORIES:-default,discovery,safe,auth,version}
+      - NMAP_SCRIPT_CATEGORIES=${NMAP_SCRIPT_CATEGORIES:-default,safe,vuln,auth,version,malware}
+      - NMAP_EXTRA_SCRIPTS=${NMAP_EXTRA_SCRIPTS:-ssh-auth-methods,ssh-hostkey,ssl-heartbleed,ssl-poodle,ssl-ccs-injection,ssl-dh-params,ftp-anon,smtp-open-relay,smb-security-mode,smb2-security-mode,mysql-empty-password,redis-info,http-methods}
       - NMAP_ALLOW_INTRUSIVE=${NMAP_ALLOW_INTRUSIVE:-false}
       # ── Custom Anthropic-compatible gateway (optional) ──
       # Set these to route the remediation LLM through a proxy/custom endpoint.

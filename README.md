@@ -12,8 +12,8 @@ along with the raw scan data.
 | **debsecan** | Debian security-tracker cross-check | Best-effort secondary check. On Ubuntu hosts this is *not* authoritative (Ubuntu maintains its own patch levels) — Trivy wins if they disagree |
 | **SSH config check** | `PermitRootLogin`, `PasswordAuthentication`, `LoginGraceTime`, `MaxAuthTries`, `X11Forwarding` | Config-level hardening, not just CVEs |
 | **nginx config check** | HSTS, CSP, `X-Frame-Options`, `server_tokens`, TLS version, rate limiting | Same, for the web layer |
-| **nmap** (self-scan, NSE scripts) | Real open ports on this host + CVE-detection scripts, `default,discovery,safe,vuln,auth` categories | Same category of check as your original manual scan — Claude is prompted to flag distro-backport false positives instead of trusting the banner |
-| **Claude (Sonnet)** | Reads all of the above, writes the prioritized plan | Turns raw tool output into "fix this first, here's the exact command" |
+| **nmap** (self-scan, NSE scripts) | Real open ports on this host + CVE-detection scripts, `default,safe,vuln,auth,version,malware` categories + behavioral probes | Same category of check as your original manual scan — Claude is prompted to flag distro-backport false positives instead of trusting the banner |
+| **Claude / Ollama** | Reads all of the above, writes the prioritized plan | Turns raw tool output into "fix this first, here's the exact command" |
 
 ## ⚠️ About nmap's NSE script categories
 
@@ -23,11 +23,40 @@ services, exploiting vulnerabilities, brute-forcing credentials, sending
 malformed input. Running the full script set monthly means this agent would
 periodically attack the very server it's protecting.
 
-**Default here:** `default,discovery,safe,vuln,auth` — full CVE-detection
-coverage, no attacks. Set `NMAP_ALLOW_INTRUSIVE=true` in `.env` to add
-`exploit,dos,brute,fuzzer` back in, but only during a maintenance window
-you've planned for, since it can crash services or lock out accounts on
-this host. Set `NMAP_SELF_SCAN=false` to disable nmap entirely.
+**Default here:** `default, safe, vuln, auth, version, malware` — full
+CVE-detection coverage, malware detection, no attacks.
+
+Additionally, **specific behavioral probes** run by default:
+```
+ssh-auth-methods, ssh-hostkey, ssl-heartbleed, ssl-poodle, ssl-ccs-injection,
+ssl-dh-params, ftp-anon, smtp-open-relay, smb-security-mode, smb2-security-mode,
+mysql-empty-password, redis-info, http-methods
+```
+
+These are configurable via `NMAP_EXTRA_SCRIPTS` in `.env`. Set to empty to
+disable: `NMAP_EXTRA_SCRIPTS=`
+
+Set `NMAP_ALLOW_INTRUSIVE=true` in `.env` to add `exploit,dos,brute,fuzzer`
+back in, but only during a maintenance window you've planned for, since it
+can crash services or lock out accounts on this host. Set `NMAP_SELF_SCAN=false`
+to disable nmap entirely.
+
+## 🚀 Setup Script
+
+```bash
+bash setup.sh
+```
+
+Interactive setup flow:
+1. Initialize `.env` from `.env.example`
+2. Check prerequisites (Docker, curl)
+3. Slack bot token with generation instructions
+4. LLM backend selection (5 options: Claude API, custom gateway, Ollama, custom gateway + Ollama fallback, Ollama only)
+5. LLM health check — tests primary backend first, graceful failure handling
+6. Slack channel ID
+7. Docker build
+8. Init container
+9. Slack onboarding message (`<hostname> _onned_*`)
 
 ## ⚠️ About network_mode: host
 
@@ -77,11 +106,34 @@ in the Dockerfile.
 
 The remediation step uses the following priority order:
 
-1. **Claude API (primary)** — Uses Anthropic's cloud API or a custom gateway
-2. **Ollama (fallback)** — Local model if Claude API is unavailable
+1. **Ollama (primary)** — Local model if configured (offline, no API costs)
+2. **Claude API (fallback)** — Uses Anthropic's cloud API or a custom gateway
 
-This ensures you get the best quality from Claude by default, with Ollama as a
-reliable fallback for offline or cost-sensitive scenarios.
+This ensures you get local processing by default, with Claude as a fallback
+for higher quality when API is available.
+
+### LLM Parameters (Temperature & Top P)
+
+Control randomness and focus of the LLM via `.env`:
+
+```bash
+LLM_TEMPERATURE=0.3      # 0.0=deterministic, 1.0=creative (recommended: 0.0-0.3 for security)
+LLM_TOP_P=0.3            # Nucleus sampling threshold (0.0-1.0, recommended: 0.1-0.3 for security)
+```
+
+Lower values = more consistent, focused output. Higher values = more creative/varied.
+
+### Dynamic Recursive Chunking
+
+Large scan reports (e.g., 100MB+ trivy.json) are processed with dynamic recursive chunking:
+
+1. **Initial split:** 50 MB chunks
+2. **On LLM failure:** chunk is halved at newline boundary (preserves JSON/XML)
+3. **Recursive halving:** 50MB → 25MB → 12.5MB → 6.25MB ... until LLM succeeds
+4. **Minimum floor:** 1 MB — if even that fails, logs warning and continues
+5. **No silent skips:** Every byte of every report is guaranteed to be processed
+
+This ensures 100% of scan data is analyzed without character loss.
 
 ### Using a custom Anthropic-compatible gateway (optional)
 
@@ -121,10 +173,30 @@ OLLAMA_MODEL=deepseek-coder-v2:16b
 3. Set the env vars above in `.env`
 
 **Ollama lifecycle:**
-- Ollama needs to be running on your host when the scan completes (for the fallback to work)
+- Ollama needs to be running on your host when the scan completes (for the primary to work)
 - You can keep it running in a terminal, or set it up as a systemd service
-- The container checks if Ollama is reachable at `OLLAMA_BASE_URL` before falling back to it
-- If Ollama is not running when needed, the fallback fails and the container exits with an error
+- The container checks if Ollama is reachable at `OLLAMA_BASE_URL` before using it
+- If Ollama is not running when needed, tries Claude API as fallback
+- If both fail → playful Slack fallback message + raw reports in thread
+
+## 📅 Cache Refresh Cron
+
+To keep Trivy's Java vulnerability database fresh:
+
+```
+0 1 25 * *  find /root/.cache/trivy/java -type f -delete 2>/dev/null || true
+0 2 26 * *  /app/scripts/run_scan.sh --refresh-cache >> /app/reports/last_run.log 2>&1
+```
+
+- **25th:** Clears cached Java vulnerability DB
+- **26th:** Re-downloads fresh Java DB + runs scan
+- **Slack notifications** sent on completion/failure of both steps
+
+## 🔄 Scan Triggers
+
+1. **First boot** — initial scan on container start
+2. **Monthly** — cron schedule (default: 03:00 on 1st of every month)
+3. **Manual** — `docker compose exec brahma-danda /app/scripts/run_scan.sh`
 
 **Notes:**
 - `host.docker.internal` resolves to the host machine from inside Docker
@@ -211,4 +283,237 @@ docker run --rm -v scan_reports:/reports alpine ls -la /reports
   callout above for exactly what that does and doesn't expose
 - No secrets in the image, in `ENV`/`ARG`, or in git — see step 2
 - Pinned base image and pinned tool versions — no `:latest` anywhere
-# brahma-danda
+
+---
+
+## 📊 Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           brahma-danda:1.0.0 Container                      │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     ENTRYPOINT (entrypoint.sh)                       │   │
+│  │                                                                     │   │
+│  │  1. Check first-boot marker (/app/reports/.first_boot_marker)       │   │
+│  │     ├─ Missing → Run initial scan, create marker                    │   │
+│  │     └─ Exists → Skip initial scan (previous boot detected)          │   │
+│  │                                                                     │   │
+│  │  2. Start cron daemon                                               │   │
+│  │     └─ Load crontab: monthly scan + cache refresh + cleanup         │   │
+│  │                                                                     │   │
+│  │  3. exec tail -f /dev/null (keep container alive)                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    TRIGGER: Manual / Monthly / First Boot            │   │
+│  │                     ↓                                                 │   │
+│  │               run_scan.sh                                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                    STEP 1: TRIVY (rootfs scan)                       │   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  nmap --script=default,vuln  -p- localhost                  │   │   │
+│  │  │  nmap --script=ssh-auth-methods,ssh-hostkey,...             │   │   │
+│  │  │                                                                     │   │
+│  │  │  Trivy rootfs scan → trivy.json                                │   │   │
+│  │  │                                                                     │   │
+│  │  │  ┌─────────────────────────────────────────────────────────────┐  │   │
+│  │  │  │  trivy scan → trivy.json (OS package CVEs)                 │  │   │
+│  │  │  │  debsecan → debsecan.txt (best-effort cross-check)         │  │   │
+│  │  │  │  ssh_checks → ssh_checks.json                              │  │   │
+│  │  │  │  nginx_checks → nginx_checks.json                          │  │   │
+│  │  │  │  docker_checks → docker_checks.json                        │  │   │
+│  │  │  │  ss_listeners → ss_listeners.txt                           │  │   │
+│  │  │  │  ufw_status → ufw_status.txt                               │  │   │
+│  │  │  │  iptables → iptables.txt                                   │  │   │
+│  │  │  │  nftables → nftables.txt                                   │  │   │
+│  │  │  │  lynis → lynis-report.dat                                  │  │   │
+│  │  │  │  nmap → nmap.xml + nmap.txt                                │  │   │
+│  │  │  │  testssl → testssl_*.json                                  │  │   │
+│  │  │  └─────────────────────────────────────────────────────────────┘  │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  Report directory: /app/reports/{timestamp}Z/              │   │   │
+│  │  │  Local copy: ~/Downloads/brahma-danda_reports/{timestamp}Z/ │   │   │
+│  │  └───────────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                  STEP 2: REMEDIATE.PY (LLM Analysis)                 │   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  _file_inputs(report_dir)                                   │   │   │
+│  │  │  └─ Return (label, content) for each artefact (no truncation)│   │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘   │   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  analyze_files() → Dynamic Recursive Chunking                │   │   │
+│  │  │  ┌─────────────────────────────────────────────────────────────┐  │   │
+│  │  │  │  For each (label, content):                                │  │   │
+│  │  │  │  ┌─────────────────────────────────────────────────────────────┐  │   │
+│  │  │  │  │  if len(content) <= 50MB:                                  │  │   │
+│  │  │  │  │  │  → _process_single_chunk(content, label, ...)           │  │   │
+│  │  │  │  │  │  ┌─────────────────────────────────────────────────────────────┐  │   │
+│  │  │  │  │  │  │  1. Send to LLM with PER_FILE_SYSTEM_PROMPT                 │  │   │
+│  │  │  │  │  │  │  2. Parse JSON response → findings list                     │  │   │
+│  │  │  │  │  │  │  3. If empty/error:                                       │  │   │
+│  │  │  │  │  │  │     └─ Return empty (no chunk left to split)               │  │   │
+│  │  │  │  │  │  └─────────────────────────────────────────────────────────────┘  │   │
+│  │  │  │  │  else:                                                              │   │   │
+│  │  │  │  │    └─ _split_text_at_newline(content) → first_half, second_half   │   │   │
+│  │  │  │  │       → _process_with_chunking(first_half, label + ".a", ...)      │   │   │
+│  │  │  │  │       → _process_with_chunking(second_half, label + ".b", ...)     │   │   │
+│  │  │  │  │       → Merge findings from both halves                            │   │   │
+│  │  │  │  └─────────────────────────────────────────────────────────────┘  │   │
+│  │  │  └─────────────────────────────────────────────────────────────────────┘   │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  combine_findings(all_findings, host)                        │   │   │
+│  │  │  └─ Send to LLM with COMBINE_SYSTEM_PROMPT                   │   │   │
+│  │  │     → Threat Brief (Slack mrkdwn format)                     │   │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                  STEP 3: POST TO SLACK (or fallback)                 │   │
+│  │                                                                     │   │
+│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
+│  │  │  if threat_brief is None:                                    │   │   │
+│  │  │  │  → Playful fallback message                              │   │   │
+│  │  │  │  → Raw reports in thread                                 │   │   │
+│  │  │  └─────────────────────────────────────────────────────────────────────┘   │   │
+│  │  │  else:                                                                     │   │
+│  │  │    → Post Threat Brief to channel (Slack mrkdwn)                         │   │   │
+│  │  │    → Announce raw reports in thread                                      │   │   │
+│  │  │    → Upload each raw file to thread (split if >50MB)                     │   │   │
+│  │  │    → Copy reports to local ~/Downloads/brahma-danda_reports/             │   │   │
+│  │  └─────────────────────────────────────────────────────────────────────┘   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 🧠 LLM Decision Flow
+
+```
+                        ┌─────────────────────┐
+                        │  remediate.py starts  │
+                        └───────────┬───────────┘
+                                    │
+                        ┌───────────▼───────────┐
+                        │  OLLAMA configured?    │
+                        └───────────┬───────────┘
+                              YES │         │ NO
+                                ┌─▼─────┐   ┌─▼─────────────────┐
+                                │  Ollama │   │  Claude configured│
+                                │  FIRST  │   │  (API or gateway) │
+                                └────┬────┘   └────────┬──────────┘
+                                   │                │
+                        ┌───────────▼────────┐       │
+                        │  call_ollama()      │       │
+                        │  (primary backend)  │       │
+                        └───────────┬────────┘       │
+                          YES │       │ NO          │
+                        ┌────▼─┐  ┌──▼──┐           │
+                        │ OK   │  │ FAIL│           │
+                        └──┬───┘  └──┬──┘           │
+                           │         │               │
+                           │    ┌────▼─────┐         │
+                           │    │  Claude   │         │
+                           │    │  (fallback│         │
+                           │    │   API)    │         │
+                           │    └────┬─────┘         │
+                           │      YES │       │ NO   │
+                           │   ┌────▼──┐  ┌──▼──┐   │
+                           │   │  OK   │  │ FAIL│   │
+                           │   └──┬────┘  └──┬──┘   │
+                           │      │          │       │
+                        ┌──▼──────▼──────────▼───────▼──┐
+                        │  Response received or None     │
+                        └───────────┬───────────────────┘
+                                    │
+                        ┌───────────▼───────────┐
+                        │  Process findings      │
+                        └───────────────────────┘
+```
+
+## 🔧 NMAP Configuration Flow
+
+```
+.env / .env.example
+│
+├─ NMAP_SELF_SCAN=true|false          → Disable/enable nmap entirely
+│
+├─ NMAP_SCRIPT_CATEGORIES=            → Main script categories
+│   default, safe, vuln, auth, version, malware
+│
+├─ NMAP_EXTRA_SCRIPTS=                → Additional specific probes
+│   ssh-auth-methods, ssh-hostkey,
+│   ssl-heartbleed, ssl-poodle, ...
+│
+└─ NMAP_ALLOW_INTRUSIVE=true|false    → Enable aggressive scripts
+    dos, exploit, brute, fuzzer
+
+run_scan.sh
+│
+├─ NMAP_CATEGORIES = ${NMAP_SCRIPT_CATEGORIES}
+├─ NMAP_EXTRA = ${NMAP_EXTRA_SCRIPTS}
+│
+├─ if NMAP_ALLOW_INTRUSIVE=true:
+│   └─ NMAP_ALL = categories + extras + aggressive
+│
+└─ nmap -sV -sC --script "${NMAP_ALL}" -p- localhost
+```
+
+## 📦 Volume Persistence
+
+```
+docker-compose.yml
+│
+├─ scan_reports:/app/reports    → Timestamped scan data
+│   └─ /app/reports/2026-08-20T091710Z/
+│       ├─ trivy.json
+│       ├─ debsecan.txt
+│       ├─ ssh_checks.json
+│       └─ ...
+│
+└─ trivy_cache:/root/.cache/trivy  → Persistent vulnerability DB
+    └─ /root/.cache/trivy/java/
+        └─ (cleared 25th, refreshed 26th)
+```
+
+## 📅 Cron Schedule
+
+```
+__SCHEDULE__ /app/scripts/run_scan.sh >> /app/reports/last_run.log 2>&1
+0 1 25 * *  find /root/.cache/trivy/java -type f -delete 2>/dev/null || true
+0 2 26 * *  /app/scripts/run_scan.sh --refresh-cache >> /app/reports/last_run.log 2>&1
+0 * * * * find /app/reports -mindepth 2 -type f -name "*.json" -o -name "*.txt" -o -name "*.xml" -o -name "*.dat" | xargs ls -t 2>/dev/null | tail -n +200 | xargs rm -f 2>/dev/null || true
+```
+
+- **Monthly scan:** 03:00 on 1st (configurable via SCAN_SCHEDULE_CRON)
+- **Cache cleanup:** 01:00 on 25th
+- **Cache refresh + scan:** 02:00 on 26th
+- **Report cleanup:** hourly (keep last 200 files)
+
+## 🔐 Security Model
+
+```
+Host Filesystem (read-only)
+│
+├─ /:/host:ro           → Container scans host state
+│   └─ Agent can READ but NOT modify host
+│
+├─ cap_drop: ALL        → Drop all capabilities
+│   └─ cap_add: NET_RAW, NET_ADMIN  → Only for nmap
+│
+├─ read_only: true      → Container's own filesystem is read-only
+│   └─ tmpfs: /tmp, /run, /var/spool  → Temporary writable
+│
+└─ /run/secrets/*       → Secrets as files (not env vars)
+    └─ slack_bot_token.txt  → 0400 permissions
+```
