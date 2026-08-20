@@ -254,11 +254,12 @@ if [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] &&
     AUTH_TOKEN=$(grep -v '^#' .env | grep '^ANTHROPIC_AUTH_TOKEN=' | cut -d= -f2-)
     CLAUDE_MODEL=$(grep -v '^#' .env | grep '^CLAUDE_MODEL=' | cut -d= -f2-)
     echo "  Testing Anthropic-compatible gateway at ${BASE_URL}..."
-    RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
+    RESPONSE=$(curl -v --connect-timeout 10 --max-time 30 \
         -X POST "${BASE_URL}/v1/messages" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${AUTH_TOKEN}" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
+    echo "  Debug: Full response: ${RESPONSE}"
     test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
         "Check: Base URL is reachable, auth token is valid, gateway accepts connections"
 
@@ -268,11 +269,12 @@ elif [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] 
     AUTH_TOKEN=$(grep -v '^#' .env | grep '^ANTHROPIC_AUTH_TOKEN=' | cut -d= -f2-)
     CLAUDE_MODEL=$(grep -v '^#' .env | grep '^CLAUDE_MODEL=' | cut -d= -f2-)
     echo "  Testing Anthropic-compatible gateway (primary) at ${BASE_URL}..."
-    RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
+    RESPONSE=$(curl -v --connect-timeout 10 --max-time 30 \
         -X POST "${BASE_URL}/v1/messages" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${AUTH_TOKEN}" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
+    echo "  Debug: Full response: ${RESPONSE}"
     test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
         "Gateway failed. Testing Ollama fallback..."
     if [ "$LLM_OK" = false ]; then
