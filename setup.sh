@@ -232,14 +232,16 @@ test_llm_connection() {
         echo ""
         echo "  Options:"
         echo "    1. Press Enter to continue (LLM features will be unavailable)"
-        echo "    2. Type 'q' to quit setup and fix the configuration"
+        echo "    2. Type 'q' or 'quit' to exit setup and fix the configuration"
         echo ""
         read -r -p "  Continue? (Enter/q): " choice
-        if [ "$choice" = "q" ] || [ "$choice" = "Q" ]; then
+        if [ "$choice" = "q" ] || [ "$choice" = "Q" ] || [ "$choice" = "quit" ] || [ "$choice" = "QUIT" ]; then
             echo ""
             echo "  Setup aborted. Fix the configuration and run setup.sh again."
             exit 1
         fi
+        # Pressing Enter (empty string) or any other input continues
+        echo "  Continuing setup without LLM connection..."
         return 1
     fi
 }
@@ -255,8 +257,7 @@ if [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] &&
     RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
         -X POST "${BASE_URL}/v1/messages" \
         -H "Content-Type: application/json" \
-        -H "x-api-key: ${AUTH_TOKEN}" \
-        -H "anthropic-version: 2023-06-01" \
+        -H "Authorization: Bearer ${AUTH_TOKEN}" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
     test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
         "Check: Base URL is reachable, auth token is valid, gateway accepts connections"
@@ -270,8 +271,7 @@ elif [ -n "$(grep -v '^#' .env | grep '^ANTHROPIC_BASE_URL=' | cut -d= -f2-)" ] 
     RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 \
         -X POST "${BASE_URL}/v1/messages" \
         -H "Content-Type: application/json" \
-        -H "x-api-key: ${AUTH_TOKEN}" \
-        -H "anthropic-version: 2023-06-01" \
+        -H "Authorization: Bearer ${AUTH_TOKEN}" \
         -d "{\"model\":\"${CLAUDE_MODEL}\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello in one word.\"}]}" 2>&1)
     test_llm_connection "Anthropic gateway" "$RESPONSE" '"content"' \
         "Gateway failed. Testing Ollama fallback..."
