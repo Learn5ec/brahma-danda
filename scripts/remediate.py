@@ -271,18 +271,20 @@ def _make_anthropic_client():
 
 
 def call_claude(client: Anthropic, model: str, system: str, user_prompt: str,
-                max_tokens: int = 2048) -> str:
+                max_tokens: int = 2048, temperature: float = 0.3, top_p: float = 0.3) -> str:
     resp = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": user_prompt}],
+        temperature=temperature,
+        top_p=top_p,
     )
     return "".join(block.text for block in resp.content if block.type == "text")
 
 
 def call_ollama(model: str, base_url: str, system: str, user_prompt: str,
-                num_predict: int = 2048) -> str:
+                num_predict: int = 2048, temperature: float = 0.3, top_p: float = 0.3) -> str:
     """Call a local Ollama instance using the chat API."""
     url = f"{base_url.rstrip('/')}/api/chat"
     payload = {
@@ -292,7 +294,11 @@ def call_ollama(model: str, base_url: str, system: str, user_prompt: str,
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
-        "options": {"num_predict": num_predict},
+        "options": {
+            "num_predict": num_predict,
+            "temperature": temperature,
+            "top_p": top_p,
+        },
     }
     print(f"[remediate] calling Ollama ({model}) at {base_url}")
     resp = requests.post(url, json=payload, timeout=600)
@@ -301,16 +307,17 @@ def call_ollama(model: str, base_url: str, system: str, user_prompt: str,
 
 
 def _llm(system: str, user: str, *, client=None, model: str = "",
-         ollama_url: str = "", ollama_model: str = "", max_tokens: int = 2048) -> str | None:
+         ollama_url: str = "", ollama_model: str = "", max_tokens: int = 2048,
+         temperature: float = 0.3, top_p: float = 0.3) -> str | None:
     """Try Ollama then Claude; return None if both fail."""
     if ollama_url and ollama_model:
         try:
-            return call_ollama(ollama_model, ollama_url, system, user, max_tokens)
+            return call_ollama(ollama_model, ollama_url, system, user, max_tokens, temperature, top_p)
         except Exception as e:
             print(f"[remediate] Ollama failed: {e}")
     if client:
         try:
-            return call_claude(client, model, system, user, max_tokens)
+            return call_claude(client, model, system, user, max_tokens, temperature, top_p)
         except Exception as e:
             print(f"[remediate] Claude failed: {e}")
     return None
@@ -670,6 +677,8 @@ def main():
     channel = os.environ["SLACK_CHANNEL_ID"]
     ollama_url = os.environ.get("OLLAMA_BASE_URL", "")
     ollama_model = os.environ.get("OLLAMA_MODEL", "")
+    temperature = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
+    top_p = float(os.environ.get("LLM_TOP_P", "0.3"))
 
     # Build Anthropic client (optional — Ollama alone is also valid)
     claude_client, claude_model = None, ""
@@ -684,6 +693,7 @@ def main():
     llm_kw = dict(
         client=claude_client, model=claude_model,
         ollama_url=ollama_url, ollama_model=ollama_model,
+        temperature=temperature, top_p=top_p,
     )
 
     # ── Step 1: analyse each scan artefact individually ──
