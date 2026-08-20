@@ -4,6 +4,13 @@
 # Claude-generated priority plan + Slack post.
 set -uo pipefail   # no -e: one tool failing shouldn't kill the whole run
 
+# ── Cache refresh mode ──
+REFRESH_CACHE=false
+if [ "${1:-}" = "--refresh-cache" ]; then
+    REFRESH_CACHE=true
+    echo "[run_scan] cache-refresh mode — will only refresh Java DB, skip actual scan"
+fi
+
 TS="$(date -u +%Y-%m-%dT%H%M%SZ)"
 REPORT_DIR="/app/reports/${TS}"
 mkdir -p "${REPORT_DIR}"
@@ -24,6 +31,23 @@ if [ ! -f "/root/.cache/trivy/java-db/trivy-java.db" ]; then
   echo "[run_scan] Java DB download complete, stored persistently."
 else
   echo "[run_scan] Java DB already cached — skipping download."
+fi
+
+# ── Cache refresh complete — exit before actual scan ──
+if [ "$REFRESH_CACHE" = true ]; then
+    echo "[run_scan] cache refresh complete"
+    # Send Slack notification
+    SLACK_TOKEN=$(cat /run/secrets/slack_bot_token 2>/dev/null)
+    CHANNEL="${SLACK_CHANNEL_ID:-}"
+    if [ -n "$SLACK_TOKEN" ] && [ -n "$CHANNEL" ]; then
+        curl -s --connect-timeout 10 --max-time 30 \
+            -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer ${SLACK_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":arrows_counterclockwise: *Java DB cache refreshed* for ${HOST_LABEL}\nThe Trivy Java vulnerability database has been successfully updated with the latest signatures. Next scan will use fresh data.\"}" \
+            >/dev/null 2>&1 || echo "[run_scan] failed to post cache refresh notification"
+    fi
+    exit 0
 fi
 
 echo "[run_scan] running trivy rootfs scan..."
@@ -141,5 +165,27 @@ echo "[run_scan] raw reports written to ${REPORT_DIR}"
 
 # ── 6. Hand off to Claude for the prioritized remediation plan + Slack post ──
 python3 /app/scripts/remediate.py --report-dir "${REPORT_DIR}" --host "${HOST_LABEL}"
+REMEDIATE_EXIT=$?
+
+# ── 7. Slack notification for scan completion ──
+SLACK_TOKEN=$(cat /run/secrets/slack_bot_token 2>/dev/null)
+CHANNEL="${SLACK_CHANNEL_ID:-}"
+if [ -n "$SLACK_TOKEN" ] && [ -n "$CHANNEL" ]; then
+    if [ $REMEDIATE_EXIT -eq 0 ]; then
+        curl -s --connect-timeout 10 --max-time 30 \
+            -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer ${SLACK_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":white_check_mark: *Scan completed successfully* for ${HOST_LABEL}\nReports and remediation plan posted to Slack.\"}" \
+            >/dev/null 2>&1 || echo "[run_scan] failed to post scan completion notification"
+    else
+        curl -s --connect-timeout 10 --max-time 30 \
+            -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer ${SLACK_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":x: *Scan failed* for ${HOST_LABEL}\nRemediation step exited with code ${REMEDIATE_EXIT}. Check logs for details.\"}" \
+            >/dev/null 2>&1 || echo "[run_scan] failed to post scan failure notification"
+    fi
+fi
 
 echo "[run_scan] done"
