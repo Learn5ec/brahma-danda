@@ -103,12 +103,16 @@ case $LLM_OPTION in
         else
             echo "  ✓ secrets/claude_api_key.txt already exists."
         fi
+        echo ""
+        read -r -p "Enter model name (default: claude-sonnet-5): " MODEL_NAME
+        MODEL_NAME=${MODEL_NAME:-claude-sonnet-5}
         # Configure .env
-        sed -i 's|^CLAUDE_MODEL=.*|CLAUDE_MODEL=claude-sonnet-5|' .env 2>/dev/null || true
+        sed -i "s|^CLAUDE_MODEL=.*|CLAUDE_MODEL=${MODEL_NAME}|" .env 2>/dev/null || true
         sed -i 's|^ANTHROPIC_BASE_URL=.*|ANTHROPIC_BASE_URL=|' .env 2>/dev/null || true
         sed -i 's|^ANTHROPIC_AUTH_TOKEN=.*|ANTHROPIC_AUTH_TOKEN=|' .env 2>/dev/null || true
         sed -i 's|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=|' .env 2>/dev/null || true
         sed -i 's|^OLLAMA_MODEL=.*|OLLAMA_MODEL=|' .env 2>/dev/null || true
+        echo "  ✓ Anthropic API + Ollama configured."
         ;;
     2)
         echo ""
@@ -122,12 +126,16 @@ case $LLM_OPTION in
             echo "ERROR: Base URL and auth token are required."
             exit 1
         fi
+        echo ""
+        read -r -p "Enter model name (default: claude-sonnet-5): " MODEL_NAME
+        MODEL_NAME=${MODEL_NAME:-claude-sonnet-5}
         # Configure .env
         sed -i "s|^ANTHROPIC_BASE_URL=.*|ANTHROPIC_BASE_URL=${BASE_URL}|" .env
         sed -i "s|^ANTHROPIC_AUTH_TOKEN=.*|ANTHROPIC_AUTH_TOKEN=${AUTH_TOKEN}|" .env
+        sed -i "s|^CLAUDE_MODEL=.*|CLAUDE_MODEL=${MODEL_NAME}|" .env 2>/dev/null || true
         sed -i 's|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=|' .env 2>/dev/null || true
         sed -i 's|^OLLAMA_MODEL=.*|OLLAMA_MODEL=|' .env 2>/dev/null || true
-        echo "  ✓ Custom gateway configured."
+        echo "  ✓ Custom gateway + Ollama configured."
         ;;
     3)
         echo ""
@@ -189,6 +197,9 @@ case $LLM_OPTION in
             exit 1
         fi
         echo ""
+        read -r -p "Enter Anthropic model name (default: claude-sonnet-5): " MODEL_NAME
+        MODEL_NAME=${MODEL_NAME:-claude-sonnet-5}
+        echo ""
         read -r -p "Enter Ollama base URL (default: http://host.docker.internal:11434): " OLLAMA_URL
         OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
         read -r -p "Enter Ollama model name (default: deepseek-coder-v2:16b): " OLLAMA_MODEL_NAME
@@ -196,6 +207,7 @@ case $LLM_OPTION in
         # Configure .env
         sed -i "s|^ANTHROPIC_BASE_URL=.*|ANTHROPIC_BASE_URL=${BASE_URL}|" .env
         sed -i "s|^ANTHROPIC_AUTH_TOKEN=.*|ANTHROPIC_AUTH_TOKEN=${AUTH_TOKEN}|" .env
+        sed -i "s|^CLAUDE_MODEL=.*|CLAUDE_MODEL=${MODEL_NAME}|" .env 2>/dev/null || true
         sed -i "s|^OLLAMA_BASE_URL=.*|OLLAMA_BASE_URL=${OLLAMA_URL}|" .env
         sed -i "s|^OLLAMA_MODEL=.*|OLLAMA_MODEL=${OLLAMA_MODEL_NAME}|" .env
         echo "  ✓ Custom gateway + Ollama fallback configured."
