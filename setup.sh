@@ -45,10 +45,10 @@ echo "  3. Name it (e.g., 'Brahma-Danda') and select your workspace"
 echo "  4. Go to 'OAuth & Permissions' in the left menu"
 echo "  5. Under 'Scopes' → 'Bot Token Scopes', add:"
 echo "     - chat:write          (to post messages)"
-echo "     - files:write         (to upload attachments)"
-echo "     - files:write.external (to upload from external URLs)"
-echo "     - channels:read       (to list channels)"
-echo "     - groups:read         (to list private channels)"
+echo "     - files:write         (to upload report files)"
+echo ""
+echo " Note: files:write covers both regular uploads and external uploads."
+echo "       channels:read and groups:read are NOT required."
 echo "  6. Go to 'Install App' in the left menu"
 echo "  7. Click 'Install to Workspace' and authorize"
 echo "  8. Copy the 'Bot User OAuth Token' (starts with xoxb-)"
@@ -376,7 +376,7 @@ echo "  ✓ Slack channel configured."
 
 # ── 5. Docker build ──
 echo ""
-echo "[6/8] Building Docker image..."
+echo "[5/8] Building Docker image..."
 docker compose build --no-cache brahmadanda
 echo "  ✓ Image built: brahma-danda:1.0.0"
 
@@ -385,6 +385,12 @@ echo ""
 echo "[7/8] Initializing Docker resources..."
 docker compose up -d brahma-danda-init
 echo "  ✓ Volumes and networks ready."
+
+# ── 7. Start brahmadanda service ──
+echo ""
+echo "[8/8] Starting brahmadanda service..."
+docker compose up -d brahmadanda
+echo "  ✓ brahmadanda service started."
 
 # ── 8. Slack Onboarding Check (last step) ──
 echo ""
