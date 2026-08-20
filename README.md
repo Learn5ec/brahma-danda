@@ -630,7 +630,7 @@ docker compose logs -f brahmadanda
 
 ```bash
 docker run --rm \
-  -v brahma-danda_scan_reports:/reports \
+  -v scan_reports:/reports \
   alpine ls -la /reports
 ```
 

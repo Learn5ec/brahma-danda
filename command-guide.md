@@ -153,10 +153,9 @@ OLLAMA_MODEL=deepseek-coder-v2:16b               # Ollama fallback model
 ## Optional Scan Modules (in `.env`)
 
 ```bash
-DOCKER_CHECKS=true     # Docker runtime security checks (default: true)
-LYNIS_SCAN=true        # Lynis Linux hardening audit (default: false, ~2-3 min)
-TLS_SCAN=true          # testssl.sh TLS certificate audit (default: false)
 NMAP_SELF_SCAN=true    # nmap port scan (default: true)
+# All other scans (SSH, nginx, Docker, Lynis, testssl.sh, ss, iptables, nftables)
+# are always run. No env var toggle exists for them.
 ```
 
 ---
