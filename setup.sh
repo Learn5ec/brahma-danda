@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 # Brahma-Danda Setup Script
 # Run this once after cloning the repo to initialize the project.
 set -euo pipefail
@@ -21,14 +21,39 @@ fi
 echo ""
 echo "[1/7] Checking prerequisites..."
 
-for cmd in docker docker compose python3 jq; do
-    if ! command -v "$cmd" &>/dev/null; then
-        echo "ERROR: $cmd is required but not installed."
-        exit 1
-    fi
-done
-echo "  ✓ All prerequisites found."
+# Check Docker
+if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: Docker is required but not installed or not available in PATH."
+    echo "PATH: $PATH"
+    exit 1
+fi
 
+# Check Docker Compose
+if ! docker compose version >/dev/null 2>&1; then
+    echo "ERROR: Docker Compose is required but not available."
+    echo "Docker found at: $(command -v docker)"
+    exit 1
+fi
+
+# Check Python
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 is required but not installed or not available in PATH."
+    exit 1
+fi
+
+# Check jq
+if ! command -v jq >/dev/null 2>&1; then
+    echo "ERROR: jq is required but not installed or not available in PATH."
+    exit 1
+fi
+
+# Check curl
+if ! command -v curl >/dev/null 2>&1; then
+    echo "ERROR: curl is required but not installed or not available in PATH."
+    exit 1
+fi
+
+echo "  ✓ All prerequisites found."
 # ── 2. Secrets initialization ──
 echo ""
 echo "[2/7] Setting up secrets..."
