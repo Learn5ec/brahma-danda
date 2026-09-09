@@ -77,6 +77,12 @@ services:
       # Leave unset to fall back to the classic claude_api_key secret.
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
       - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-}
+      # Chunk-size safety valve.  Raise only if the gateway 413s on legitimate loads
+      # after binary-searching the real limit.  When unset remediate.py logs a
+      # WARNING about the conservative 1 MB default.
+      - GATEWAY_MAX_BODY_BYTES=${GATEWAY_MAX_BODY_BYTES:-}
+      # Log level for remediate.py (DEBUG / INFO / WARNING / ERROR).
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       # ── Local Ollama support (optional) ──
       # Set these to use a local Ollama instance as primary/fallback LLM.
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}

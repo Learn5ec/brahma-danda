@@ -143,7 +143,7 @@ curl http://172.17.0.1:11434/api/tags   # verify Ollama reachable from container
 ```bash
 ANTHROPIC_BASE_URL=                               # custom gateway URL (optional)
 ANTHROPIC_AUTH_TOKEN=                             # Bearer token for custom gateway
-ANTHROPIC_MODEL=ornith-1.0                        # model override
+ANTHROPIC_MODEL=coder
 OLLAMA_BASE_URL=http://host.docker.internal:11434 # Ollama fallback URL
 OLLAMA_MODEL=deepseek-coder-v2:16b               # Ollama fallback model
 ```

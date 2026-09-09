@@ -148,7 +148,7 @@ File-specific guidance (BE EXHAUSTIVE — extract EVERY finding at Critical/High
 
 Rules:
 - Include only Critical and High findings. Omit Medium, Low, and Informational.
-- Do NOT include recommendations or fix commands.
+- Do NOT put fix commands inside risk/evidence; "recommendation" is optional.
 - Every finding must have concrete evidence anchored to the source file.
 - If no findings exist, return {"findings": [], "source_finding_count": 0}.
 - Set source_finding_count to total issues seen (including omitted ones).

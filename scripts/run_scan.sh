@@ -4,6 +4,41 @@
 # Claude-generated priority plan + Slack post.
 set -uo pipefail   # no -e: one tool failing shouldn't kill the whole run
 
+# ── Phase 4: exclusive concurrency lock ─────────────────────────────────────
+# Refuse to run a second scan while one is already in progress — a manual
+# trigger overlapping a scheduled run, or a retry overlapping the first-boot
+# scan — would otherwise interleave two runs against the same read-only host.
+# The lock is held on fd 200 via flock, so it auto-releases on process exit
+# (crash-safe: no stale lock is left behind). If flock is unavailable we fall
+# back to an atomic mkdir(2) lock, cleaned up on exit via a trap. The lock file
+# is /tmp/brahmadanda_scan.lock (set via BRAHMADANDA_LOCK) — /tmp is sticky
+# world-writable 1777 tmpfs scratch, so the non-root 999 scan user can create
+# it, and tmpfs means stale locks never accumulate on the persistent volume.
+LOCKFILE="${BRAHMADANDA_LOCK:-/tmp/brahmadanda_scan.lock}"
+mkdir -p "$(dirname "$LOCKFILE")" 2>/dev/null || true
+LOCK_HELD=0
+if command -v flock >/dev/null 2>&1; then
+  # NOTE: do NOT append `2>/dev/null` here — a redirection-only `exec`
+  # applies the redirect permanently to this shell, which would hide the
+  # message below. We want fd 200 open (holds the lock); stderr stays as-is.
+  if exec 200>"$LOCKFILE" && flock -n 200; then
+    echo "[run_scan] acquired exclusive lock ${LOCKFILE}"
+  else
+    LOCK_HELD=1
+  fi
+else
+  if mkdir "$LOCKFILE" 2>/dev/null; then
+    trap 'rmdir "$LOCKFILE" 2>/dev/null || true' EXIT
+    echo "[run_scan] acquired exclusive lock ${LOCKFILE} (mkdir fallback)"
+  else
+    LOCK_HELD=1
+  fi
+fi
+if [ "$LOCK_HELD" -eq 1 ]; then
+  echo "[run_scan] ${LOCKFILE} is locked by another scan — refusing to run concurrently" >&2
+  exit 0
+fi
+
 # ── Cache refresh mode ──
 REFRESH_CACHE=false
 if [ "${1:-}" = "--refresh-cache" ]; then
@@ -15,20 +50,56 @@ TS="$(date -u +%Y-%m-%dT%H%M%SZ)"
 REPORT_DIR="/app/reports/${TS}"
 mkdir -p "${REPORT_DIR}"
 
+# Phase 1: unique run id — 24 hex chars in MongoDB ObjectId format, so every
+# artefact in this run's directory traces back to a single scan. `od` is used
+# (not `xxd`) because it ships on the minimal Alpine base that carries trivy.
+export SCAN_ID="$(LC_ALL=C head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' | head -c 24)"
+
+# ── Phase 0.1 / 1.x: run-scoped state inherited by every child process ────────
+# Export REPORT_DIR so remediate.py and scripts/checks/*.sh all write into the
+# SAME directory instead of each recomputing a timestamp (single source of
+# truth — removes the "artefacts in mismatched timestamp dirs" bug class).
+export REPORT_DIR
+
+# LOG_LEVEL gates [run_scan]/[remediate] verbosity. DEBUG reveals the raw LLM
+# request/response, HTTP status and stop_reason for every call (Phase 0.3).
+_LOG_LEVEL_RAW="${LOG_LEVEL:-INFO}"
+LOG_LEVEL="$(printf '%s' "${_LOG_LEVEL_RAW}" | tr '[:lower:]' '[:upper:]')"
+case "${LOG_LEVEL}" in
+    INFO|DEBUG) : ;;
+    *)  LOG_LEVEL="INFO"
+        echo "[run_scan] unknown LOG_LEVEL='${_LOG_LEVEL_RAW}' — defaulting to INFO" >&2 ;;
+esac
+export LOG_LEVEL
+
+# ── Phase 0.2: stream run_scan.sh output to stdout AND a per-run log file ─────
+# tee keeps container stdout intact (docker compose logs still sees this) while
+# the file survives restarts. run_scan.log rides along with the raw artefacts
+# when remediate.py uploads the thread (Phase 0).
+exec > >(tee -a "${REPORT_DIR}/run_scan.log") 2>&1
+
 HOST_LABEL="${HOSTNAME_OVERRIDE:-$(cat /host/etc/hostname 2>/dev/null || echo unknown-host)}"
-echo "[run_scan] starting scan of ${HOST_LABEL} at ${TS}"
+echo "[run_scan] starting scan of ${HOST_LABEL} at ${TS} (LOG_LEVEL=${LOG_LEVEL})"
 
 # ── 1. Trivy — OS package + known-CVE scan against the mounted host root ──
-# Both the vuln DB and Java DB are stored in the persistent trivy_cache volume
-# at /root/.cache/trivy. Neither will re-download on container restarts.
-mkdir -p /root/.cache/trivy 2>/dev/null || true
+# Both the vuln DB and Java DB live at Trivy's DEFAULT cache dir,
+# /root/.cache/trivy — which is the persistent trivy_cache named volume (see
+# docker-compose.yml).  Do NOT point --cache-dir at /app/.trivy: /app is on
+# the container's read-only rootfs, writes silently fail there, and the Java
+# DB re-downloaded (and silently failed) on every single run.
+JAVA_DB="/root/.cache/trivy/java-db/trivy-java.db"
 
 # Pre-download Java DB if not already cached (one-time, ~907 MB).
-# Stored in persistent volume so restarts/rebuilds won't re-fetch it.
-if [ ! -f "/root/.cache/trivy/java-db/trivy-java.db" ]; then
+# Stored in the persistent volume so restarts/rebuilds won't re-fetch it.
+if [ ! -f "$JAVA_DB" ]; then
   echo "[run_scan] Java DB not found in cache — downloading once (this takes ~15m)..."
-  trivy image --download-java-db-only --cache-dir /root/.cache/trivy 2>&1 | tail -5 || true
-  echo "[run_scan] Java DB download complete, stored persistently."
+  # NOTE: no `|| true` — a swallowed failure here looked like success for
+  # months ("stored persistently") while writing nothing.  pipefail is on.
+  if trivy image --download-java-db-only 2>&1 | tail -5; then
+    echo "[run_scan] Java DB download complete, stored persistently."
+  else
+    echo "[run_scan] WARNING: Java DB download FAILED — jar/war findings may be incomplete this run" >&2
+  fi
 else
   echo "[run_scan] Java DB already cached — skipping download."
 fi
@@ -90,11 +161,15 @@ echo "[run_scan] running lynis..."
 lynis audit system --quick --pentest --logfile "${REPORT_DIR}/lynis.log" --report-file "${REPORT_DIR}/lynis-report.dat" > /dev/null 2>&1 || true
 
 # ── 3.2 Network Exposure / Firewall ──
+# These read-only probes need root, so run them via the NOPASSWD sudoers entry
+# (the scan user is now UID 999, not root). All four are strictly read-only —
+# they report the host's state, never change it. The redirection opens the
+# report file as 999 first, so the files stay owned by the scan user.
 echo "[run_scan] gathering network exposure and firewall data..."
-ss -tlnp > "${REPORT_DIR}/ss_listeners.txt" 2>/dev/null || ss -tln > "${REPORT_DIR}/ss_listeners.txt"
-ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo "ufw not found or insufficient permissions" > "${REPORT_DIR}/ufw_status.txt"
-iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
-nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
+sudo ss -tlnp > "${REPORT_DIR}/ss_listeners.txt" 2>/dev/null || ss -tln > "${REPORT_DIR}/ss_listeners.txt"
+sudo ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo "ufw not found or insufficient permissions" > "${REPORT_DIR}/ufw_status.txt"
+sudo iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
+sudo nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
 
 # ── 4. nmap — self-scan of THIS host's real listening ports (needs network_mode: host,
 #    see docker-compose.yml for the documented trade-off). Safe script categories by
@@ -167,6 +242,28 @@ jq -n \
 
 echo "[run_scan] raw reports written to ${REPORT_DIR}"
 
+# ── Phase 1: write a run manifest so each scan is traceable to its scan_id and
+#    every artefact can be reproduced/audited. Written BEFORE the remediation
+#    step so remediate.py can read it (as reference — never as an input) and
+#    attach it to the Slack thread. Version probes are best-effort: a tool that
+#    is not installed simply leaves its field empty, never fatal (no set -e). ──
+SCAN_TRIVY="$(trivy --version 2>/dev/null | awk '{print $3}' | tr -d '"' || true)"
+SCAN_DEBSECAN="$(debsecan --version 2>/dev/null | head -1 | tr -d '"' || true)"
+SCAN_NMAP="$(nmap --version 2>/dev/null | head -1 | tr -d '"' || true)"
+SCAN_LYNIS="$(lynis --version 2>/dev/null | tr -d '"' || true)"
+jq -n \
+  --arg scan_id "${SCAN_ID}" \
+  --arg scanned_at "${TS}" \
+  --arg host_label "${HOST_LABEL}" \
+  --arg trivy "${SCAN_TRIVY}" \
+  --arg debsecan "${SCAN_DEBSECAN}" \
+  --arg nmap "${SCAN_NMAP}" \
+  --arg lynis "${SCAN_LYNIS}" \
+  '{scan_id: $scan_id, scanned_at: $scanned_at, host_label: $host_label,
+    scan_tools: {trivy: $trivy, debsecan: $debsecan, nmap: $nmap, lynis: $lynis}}' \
+  > "${REPORT_DIR}/.scan_manifest.json"
+echo "[run_scan] scan_id=${SCAN_ID} manifest written to .scan_manifest.json"
+
 # ── 6. Hand off to Claude for the prioritized remediation plan + Slack post ──
 python3 /app/scripts/remediate.py --report-dir "${REPORT_DIR}" --host "${HOST_LABEL}"
 REMEDIATE_EXIT=$?
@@ -193,3 +290,4 @@ if [ -n "$SLACK_TOKEN" ] && [ -n "$CHANNEL" ]; then
 fi
 
 echo "[run_scan] done"
+exit $REMEDIATE_EXIT

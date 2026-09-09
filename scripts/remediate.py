@@ -7,10 +7,10 @@ Parts implemented:
   A – structural chunking (JSON-array, line-boundary, XML-element)
   B – forced tool-use (report_findings schema)
   C – truncation detection + auto-continue
-  D – failure classification + retry with backoff
+  D – failure classification + retry with backoff + fast-fail on config errors
   E – debug logging (stdout + file + raw dump on failure)
   F – reconciliation (nothing silently dropped)
-  G – severity pre-filter (critical/high/medium only to LLM)
+  G – severity pre-filter (critical/high only to LLM; streamed for trivy.json)
   H – prompt caching (cache_control on static system prompt)
   I – regression fixtures + tests (see tests/)
 """
@@ -50,8 +50,9 @@ LOGGER = logging.getLogger("brahma-danda.remediate")
 #
 # safe_chunk_bytes = min(GATEWAY_MAX_BODY_BYTES, MODEL_SAFE_INPUT_BYTES) * 0.7
 #   The 0.7 margin is intentional headroom — do NOT remove it.
+#
+# MODEL_SAFE_INPUT_BYTES is imported from prompts.py — single source of truth.
 # ---------------------------------------------------------------------------
-MODEL_SAFE_INPUT_BYTES: int = 770_000
 
 def _gateway_max_body_bytes() -> int:
     raw = os.environ.get("GATEWAY_MAX_BODY_BYTES", "").strip()
@@ -73,6 +74,16 @@ def _safe_chunk_bytes() -> int:
 # Max continuation attempts before re-chunking (Part C)
 MAX_CONTINUATION_ATTEMPTS: int = 2
 
+# How deep re-chunking of a still-truncated chunk may nest (Part C)
+MAX_RECHUNK_DEPTH: int = 1
+
+# Cost/latency guard: if one artefact explodes past this many chunks, the rest
+# are SKIPPED (loudly — recorded in reconciliation + incomplete notice).
+MAX_CHUNKS_PER_FILE: int = 100
+
+# Artefacts larger than this are not LLM-analysed at all (OOM guard).
+MAX_ARTEFACT_BYTES: int = 500_000_000
+
 # Retry config for transient failures (Part D)
 RETRY_DELAYS: list[float] = [2.0, 8.0, 30.0]  # seconds; exponential-ish backoff
 
@@ -87,14 +98,13 @@ LLM_FALLBACK_MESSAGES = [
 ]
 
 from prompts import (
-    SYSTEM_PROMPT,
     PER_FILE_SYSTEM_PROMPT,
     PER_FILE_SYSTEM_PROMPT_FALLBACK,
     COMBINE_SYSTEM_PROMPT,
     REPORT_FINDINGS_TOOL,
     MAX_TOKENS_PER_FILE,
     MAX_TOKENS_COMBINE,
-    MODEL_SAFE_INPUT_BYTES as _PROMPT_MODEL_SAFE,  # keep in sync
+    MODEL_SAFE_INPUT_BYTES,  # canonical value lives in prompts.py
 )
 
 # ---------------------------------------------------------------------------
@@ -196,26 +206,62 @@ def _preview(text: str, n: int = 400) -> str:
 # ===========================================================================
 # Part G — Severity pre-filter
 # ===========================================================================
-_TRIVY_KEEP = {"CRITICAL", "HIGH", "MEDIUM"}
+_TRIVY_KEEP = {"CRITICAL", "HIGH"}   # prompts only ask the model for these
 _LYNIS_SKIP_PREFIXES = ("suggestion[", "manual[", "hardening_index")
 
+# Fields sent to the LLM per CVE. "Description" (long prose, the bulk of
+# trivy.json's 230 MB) is deliberately dropped — the model anchors evidence
+# on VulnerabilityID / package / versions / Title.
+_TRIVY_FIELDS = ("VulnerabilityID", "PkgName", "InstalledVersion",
+                 "FixedVersion", "Severity", "Title")
 
-def _filter_trivy_json(content: str, label: str) -> tuple[str, int, int]:
+
+def _trivy_expected_and_chunks(raw: str, target_bytes: int, label: str):
+    """Stream-parse trivy.json ONCE and lazily yield chunk strings.
+
+    Returns (expected_total, chunk_iterator).  Replaces the old
+    parse→filter→re-dump-whole-file→split pipeline, which held a 230 MB raw
+    string, a fully-parsed copy, a re-dumped filtered copy AND ~300 chunk
+    strings in memory at once and was OOM-killed.
+
+    The iterator yields one {"Target":…,"Vulnerabilities":[…]} JSON object per
+    chunk, filtered to _TRIVY_KEEP severities and stripped to _TRIVY_FIELDS.
+    Returns (0, None) if the content does not parse as trivy JSON.
+    """
     try:
-        data = json.loads(content)
+        data = json.loads(raw)
     except json.JSONDecodeError:
-        return content, 0, 0
-    total = kept = 0
-    for result in data.get("Results", []):
-        vulns = result.get("Vulnerabilities") or []
-        filtered = [v for v in vulns if v.get("Severity", "").upper() in _TRIVY_KEEP]
-        total += len(vulns)
-        kept += len(filtered)
-        result["Vulnerabilities"] = filtered
-    dropped = total - kept
-    LOGGER.info("%s: kept %d of %d findings (critical/high/medium), dropped %d info/low",
-                label, kept, total, dropped)
-    return json.dumps(data), kept, dropped
+        return 0, None
+    if not isinstance(data, dict) or not isinstance(data.get("Results"), list):
+        return 0, None
+
+    expected = sum(len(r.get("Vulnerabilities") or []) for r in data["Results"])
+
+    def _gen():
+        kept = 0
+        for result in data["Results"]:
+            meta = {k: v for k, v in result.items() if k != "Vulnerabilities"}
+            cur, cur_bytes = [], 0
+            for v in result.get("Vulnerabilities") or []:
+                if str(v.get("Severity", "")).upper() not in _TRIVY_KEEP:
+                    continue
+                slim = {k: v[k] for k in _TRIVY_FIELDS if k in v}
+                vb = len(json.dumps(slim).encode())
+                if cur and cur_bytes + vb > target_bytes:
+                    kept += len(cur)
+                    yield json.dumps({**meta, "Vulnerabilities": cur},
+                                     separators=(",", ":"))
+                    cur, cur_bytes = [], 0
+                cur.append(slim)
+                cur_bytes += vb
+            if cur:
+                kept += len(cur)
+                yield json.dumps({**meta, "Vulnerabilities": cur},
+                                 separators=(",", ":"))
+        LOGGER.info("%s: streamed filter kept %d of %d vulns (critical/high only)",
+                    label, kept, expected)
+
+    return expected, _gen()
 
 
 def _filter_lynis(content: str, label: str) -> tuple[str, int, int]:
@@ -233,8 +279,7 @@ def _filter_lynis(content: str, label: str) -> tuple[str, int, int]:
 
 
 def _apply_severity_filter(label: str, content: str) -> tuple[str, int, int]:
-    if label == "trivy.json":
-        return _filter_trivy_json(content, label)
+    # trivy.json is handled by the streaming path (_trivy_expected_and_chunks)
     if label == "lynis-report.dat":
         return _filter_lynis(content, label)
     return content, 0, 0
@@ -396,8 +441,9 @@ def _chunks_from_xml(content: str, target_bytes: int, label: str) -> list[str]:
     return chunks or [content]
 
 
-def _smart_chunks(label: str, content: str) -> list[str]:
-    target = _safe_chunk_bytes()
+def _smart_chunks(label: str, content: str, target: int | None = None) -> list[str]:
+    if target is None:
+        target = _safe_chunk_bytes()
     content_bytes = len(content.encode())
     if content_bytes <= target:
         LOGGER.debug("%s (%d bytes) fits in one chunk (target=%d)", label, content_bytes, target)
@@ -443,7 +489,10 @@ def _make_anthropic_client():
         or os.environ.get("CLAUDE_MODEL", "").strip()
         or "claude-sonnet-5"
     )
-    kwargs: dict = {"api_key": api_key}
+    # max_retries=0: the SDK's internal retries (default 2) compound with our
+    # _with_retry backoff — observed live: one 524 storm burned ~7 min per
+    # attempt before our own retry counter even ticked.
+    kwargs: dict = {"api_key": api_key, "max_retries": 0}
     if base_url:
         kwargs["base_url"] = base_url
         LOGGER.info("using custom Anthropic gateway: %s", base_url)
@@ -459,6 +508,23 @@ def _make_anthropic_client():
 _CACHING_VERIFIED: bool | None = None   # None = not yet tested
 
 
+def _create_message(client: "Anthropic", **kwargs):
+    """messages.create() wrapper that STREAMS unless REMEDIATE_NO_STREAM=1.
+
+    Observed live: the gateway sits behind Cloudflare, which kills any
+    non-streaming request whose response takes >120s (Error 524 — "origin
+    took too long to respond").  Large chunks always take longer than that,
+    so every big call died with 524.  SSE streaming sends bytes continuously,
+    which keeps the proxy-read timer fed and the connection alive.
+
+    Returns the final (fully-assembled) Message either way.
+    """
+    if os.environ.get("REMEDIATE_NO_STREAM", "").strip() in ("1", "true", "yes"):
+        return client.messages.create(**kwargs)
+    with client.messages.stream(**kwargs) as stream:
+        return stream.get_final_message()
+
+
 def _build_cached_system(prompt_text: str) -> list[dict]:
     """Wrap the static system prompt with cache_control for Part H."""
     return [{"type": "text", "text": prompt_text, "cache_control": {"type": "ephemeral"}}]
@@ -472,8 +538,8 @@ def _verify_caching(client: Anthropic, model: str, system_text: str) -> bool:
     try:
         system_block = _build_cached_system(system_text)
         probe = {"role": "user", "content": "ping"}
-        r1 = client.messages.create(model=model, max_tokens=16, system=system_block, messages=[probe])
-        r2 = client.messages.create(model=model, max_tokens=16, system=system_block, messages=[probe])
+        _create_message(client, model=model, max_tokens=16, system=system_block, messages=[probe])  # prime cache
+        r2 = _create_message(client, model=model, max_tokens=16, system=system_block, messages=[probe])
         read = getattr(getattr(r2, "usage", None), "cache_read_input_tokens", 0) or 0
         _CACHING_VERIFIED = read > 0
         if not _CACHING_VERIFIED:
@@ -497,22 +563,37 @@ class _LLMFailure(Exception):
     """Typed failure so Part D can classify it."""
     def __init__(self, kind: str, msg: str, status: int | None = None, raw: str = ""):
         super().__init__(msg)
-        self.kind = kind      # "transient" | "gateway_rejection" | "content"
+        self.kind = kind      # "transient" | "gateway_rejection" | "fatal"
         self.status = status
         self.raw = raw
 
 
+class FatalLLMError(Exception):
+    """Non-retryable config/gateway error (bad model name, bad key, …).
+
+    Retrying cannot fix these — retrying 404 "model not found" against every
+    chunk of a 230 MB trivy.json cost ~36 minutes and produced nothing.
+    Propagates to main() which posts raw artefacts + exits non-zero.
+    """
+
+
 def _classify_exception(exc: Exception) -> str:
-    """Part D: classify an exception into transient / gateway_rejection / content."""
+    """Part D: classify an exception into transient / gateway_rejection / fatal."""
     status = getattr(exc, "status_code", None)
-    body = str(getattr(exc, "message", "") or getattr(exc, "body", "") or exc)
-    if status == 413 or "payload too large" in body.lower() or "request entity too large" in body.lower():
+    if status is None:  # requests.HTTPError carries status on .response
+        resp = getattr(exc, "response", None)
+        status = getattr(resp, "status_code", None) if resp is not None else None
+    body = str(getattr(exc, "message", "") or getattr(exc, "body", "") or exc).lower()
+    if status == 413 or "payload too large" in body or "request entity too large" in body:
         return "gateway_rejection"
-    if status in (429, 500, 502, 503, 504) or "timeout" in body.lower() or "upstream" in body.lower():
-        return "transient"
-    if status is not None and status >= 400:
-        return "transient"
-    return "transient"  # network errors default to transient
+    # Non-retryable: auth / model / request-shape errors. Retrying cannot fix
+    # these — observed live when a wrong model name (404) was retried per chunk.
+    if status in (400, 401, 403, 404, 422) \
+            or "model not found" in body or "invalid_api_key" in body \
+            or "authentication_error" in body:
+        return "fatal"
+    # Everything else (429, 5xx, timeouts, network errors) is worth retrying.
+    return "transient"
 
 
 def _extract_tool_result(response) -> tuple[dict | None, str | None]:
@@ -544,7 +625,8 @@ def call_claude_tool(
     prompt_bytes = len(user_prompt.encode())
     system_content = _build_cached_system(system) if use_cache else system
     start = time.monotonic()
-    resp = client.messages.create(
+    resp = _create_message(
+        client,
         model=model,
         max_tokens=max_tokens,
         system=system_content,
@@ -587,7 +669,8 @@ def call_claude_prose(
     """Prose-JSON fallback for Part B (when tool-use unsupported)."""
     system_content = _build_cached_system(system) if use_cache else system
     start = time.monotonic()
-    resp = client.messages.create(
+    resp = _create_message(
+        client,
         model=model, max_tokens=max_tokens,
         system=system_content,
         messages=[{"role": "user", "content": user_prompt}],
@@ -662,13 +745,14 @@ def _with_retry(fn, label: str, stats: "ScanStats | None", *args, **kwargs):
         except Exception as exc:
             kind = _classify_exception(exc)
             status = getattr(exc, "status_code", None)
+            last_exc = exc
+            if kind != "transient":
+                # gateway_rejection / fatal — retrying cannot help; stop now
+                LOGGER.error("[retry] %s attempt %d failed kind=%s status=%s (not retrying): %s",
+                             label, attempt, kind, status, exc)
+                raise _LLMFailure(kind, str(exc), status) from exc
             LOGGER.warning("[retry] %s attempt %d failed kind=%s status=%s: %s",
                            label, attempt, kind, status, exc)
-            last_exc = exc
-            if kind == "gateway_rejection":
-                raise _LLMFailure("gateway_rejection", str(exc), status) from exc
-            if kind != "transient":
-                raise _LLMFailure("content", str(exc), status) from exc
             if stats:
                 stats.total_errors += 1
     raise _LLMFailure("transient", f"all retries exhausted for {label}: {last_exc}") from last_exc
@@ -694,13 +778,17 @@ def _call_with_continuation(
     label: str, chunk_idx: int, report_dir: Path,
     max_tokens: int, stats: "ScanStats | None",
     use_cache: bool, use_tool_use: bool,
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, str | None]:
     """Part C: call model, detect max_tokens truncation, auto-continue up to 2x.
 
-    Returns (findings_list, source_finding_count).
+    Returns (findings_list, source_finding_count, rechunk_content).
+    rechunk_content is non-None when the response was still truncated after all
+    continuations — the caller must re-chunk it and process the sub-chunks so
+    nothing is silently dropped.
     """
     all_findings: list[dict] = []
     source_count = 0
+    rechunk_content: str | None = None
 
     current_prompt = user_prompt
     continuation_attempt = 0
@@ -742,76 +830,69 @@ def _call_with_continuation(
                 p = _write_raw_debug(report_dir, label, chunk_idx, fallback_text)
                 LOGGER.warning("⚠️  %s[%d] tool_use block missing — raw saved to %s",
                                label, chunk_idx, p)
-            return all_findings, source_count
+            return all_findings, source_count, None
 
         # --- Part C: truncation check ---
-        if stop_reason in ("max_tokens", "length"):
-            if stats:
-                stats.truncation_events += 1
-            if continuation_attempt < MAX_CONTINUATION_ATTEMPTS:
-                continuation_attempt += 1
-                if stats:
-                    stats.continuations_used += 1
-                LOGGER.warning(
-                    "⚠️  %s[%d] truncated at max_tokens, attempting continuation %d/%d",
-                    label, chunk_idx, continuation_attempt, MAX_CONTINUATION_ATTEMPTS,
-                )
-                already = json.dumps([f["risk"] for f in all_findings])
-                current_prompt = (
-                    f"{user_prompt}\n\n"
-                    f"[CONTINUATION {continuation_attempt}] "
-                    f"The previous response was cut off. "
-                    f"Continue the findings array from where you left off. "
-                    f"Do NOT repeat findings already returned. "
-                    f"Already reported risks: {already}"
-                )
-                continue
-            else:
-                # Cap reached — re-chunk this prompt into two smaller pieces
-                LOGGER.warning(
-                    "⚠️  %s[%d] still truncated after %d continuations — re-chunking",
-                    label, chunk_idx, MAX_CONTINUATION_ATTEMPTS,
-                )
-                sub_target = _safe_chunk_bytes() // 2
-                # Extract just the file content portion of the prompt for re-chunking
-                content_match = re.search(r"=== FILE CONTENT ===\n(.*)", user_prompt, re.DOTALL)
-                if content_match:
-                    sub_content = content_match.group(1)
-                    suffix = Path(label).suffix.lower()
-                    if suffix == ".json":
-                        sub_chunks = _chunks_from_json_array(sub_content, sub_target, label)
-                    elif suffix == ".xml":
-                        sub_chunks = _chunks_from_xml(sub_content, sub_target, label)
-                    else:
-                        sub_chunks = _chunks_from_lines(sub_content, sub_target, label)
-                    LOGGER.info("%s[%d] re-chunked into %d sub-chunks", label, chunk_idx, len(sub_chunks))
-                    return all_findings, source_count  # sub-chunks processed by caller
-                break
-        else:
+        if stop_reason not in ("max_tokens", "length"):
             break  # normal stop_reason — done
 
-    return all_findings, source_count
+        if stats:
+            stats.truncation_events += 1
+        if continuation_attempt < MAX_CONTINUATION_ATTEMPTS:
+            continuation_attempt += 1
+            if stats:
+                stats.continuations_used += 1
+            LOGGER.warning(
+                "⚠️  %s[%d] truncated at max_tokens, attempting continuation %d/%d",
+                label, chunk_idx, continuation_attempt, MAX_CONTINUATION_ATTEMPTS,
+            )
+            already = json.dumps([f.get("risk", "") for f in all_findings])
+            current_prompt = (
+                f"{user_prompt}\n\n"
+                f"[CONTINUATION {continuation_attempt}] "
+                f"The previous response was cut off. "
+                f"Continue the findings array from where you left off. "
+                f"Do NOT repeat findings already returned. "
+                f"Already reported risks: {already}"
+            )
+            continue
+        # Cap reached — hand the still-truncated content back to the caller so
+        # it can be re-chunked at half size and processed (not dropped).
+        LOGGER.warning(
+            "⚠️  %s[%d] still truncated after %d continuations — signalling re-chunk",
+            label, chunk_idx, MAX_CONTINUATION_ATTEMPTS,
+        )
+        content_match = re.search(r"=== FILE CONTENT ===\n(.*)", user_prompt, re.DOTALL)
+        rechunk_content = content_match.group(1) if content_match else None
+        break
+
+    return all_findings, source_count, rechunk_content
 
 
 def _process_single_chunk(
-    text: str, label: str, chunk_idx: int, host: str, report_dir: Path,
+    text: str, label: str, chunk_idx, host: str, report_dir: Path,
     client=None, model: str = "",
     ollama_url: str = "", ollama_model: str = "",
     temperature: float = 0.3, top_p: float = 0.3,
     stats: "ScanStats | None" = None,
     use_cache: bool = False,
     use_tool_use: bool = True,
+    _depth: int = 0,
 ) -> tuple[list[dict], int]:
     """Send one chunk to the LLM. Returns (findings, source_finding_count).
 
-    Part D: classifies failures and retries appropriately.
+    Part C: if the chunk truncates past the continuation cap, it is re-chunked
+    at half size and the sub-chunks are processed here (depth-limited) — the
+    data is never dropped, only split further.
+    Part D: classifies failures and retries appropriately; fatal failures
+    raise FatalLLMError to abort the run fast.
     Never silently drops data — all failures are logged + raw saved.
     """
     max_tokens = min(MAX_TOKENS_PER_FILE, max(1024, len(text) // 2))
     user = f"Host: {host}\nSource file: {label}\n\n=== FILE CONTENT ===\n{text}"
     system = PER_FILE_SYSTEM_PROMPT if use_tool_use else PER_FILE_SYSTEM_PROMPT_FALLBACK
 
-    LOGGER.debug("[chunk] %s[%d] (%d chars) → LLM max_tokens=%d", label, chunk_idx, len(text), max_tokens)
+    LOGGER.debug("[chunk] %s[%s] (%d chars) → LLM max_tokens=%d", label, chunk_idx, len(text), max_tokens)
 
     # Ollama path (prose-JSON only — Ollama doesn't support tool-use schema)
     use_ollama = ollama_url and ollama_model and not os.environ.get("ANTHROPIC_BASE_URL")
@@ -840,6 +921,8 @@ def _process_single_chunk(
                 stats.chunks_succeeded_first_try += 1
             return findings, sc
         except _LLMFailure as e:
+            if e.kind == "fatal":
+                raise FatalLLMError(f"Ollama rejected the request (status={e.status}): {e}") from e
             LOGGER.error("⚠️  %s[%d] Ollama %s failure: %s", label, chunk_idx, e.kind, e)
             if stats:
                 stats.chunks_failed += 1
@@ -854,23 +937,59 @@ def _process_single_chunk(
         return [], 0
 
     # Claude path
-    retries_before = stats.chunks_succeeded_after_retry if stats else 0
+    errors_before = stats.total_errors if stats else 0
     try:
-        findings, sc = _call_with_continuation(
+        findings, sc, rechunk = _call_with_continuation(
             client, model, system, user,
             label, chunk_idx, report_dir,
             max_tokens, stats, use_cache, use_tool_use,
         )
         if stats:
-            # If any retry happened (total_errors increased), count as after_retry
-            if stats.total_errors > 0:
+            # Count as after-retry only if THIS chunk actually retried
+            if stats.total_errors > errors_before:
                 stats.chunks_succeeded_after_retry += 1
             else:
                 stats.chunks_succeeded_first_try += 1
         for f in findings:
             f.setdefault("evidence", f.get("evidence", "") or label)
+
+        # Part C: re-chunk a still-truncated chunk and process the pieces.
+        if rechunk is not None:
+            if _depth >= MAX_RECHUNK_DEPTH:
+                LOGGER.error(
+                    "⚠️  %s[%s] still truncated and re-chunk depth %d reached — "
+                    "marking chunk incomplete (raw file attached for review)",
+                    label, chunk_idx, MAX_RECHUNK_DEPTH,
+                )
+                if stats:
+                    stats.chunks_failed += 1
+                    stats.failed_chunk_ids.append(f"{label}[{chunk_idx}]")
+                return findings, sc
+            sub_target = _safe_chunk_bytes() // 2
+            sub_chunks = _smart_chunks(label, rechunk, target=sub_target)
+            LOGGER.info("%s[%s] re-chunked into %d sub-chunk(s), processing",
+                        label, chunk_idx, len(sub_chunks))
+            for j, sub in enumerate(sub_chunks):
+                sub_findings, sub_sc = _process_single_chunk(
+                    sub, label, f"{chunk_idx}.{j}", host, report_dir,
+                    client=client, model=model,
+                    ollama_url=ollama_url, ollama_model=ollama_model,
+                    temperature=temperature, top_p=top_p, stats=stats,
+                    use_cache=use_cache, use_tool_use=use_tool_use,
+                    _depth=_depth + 1,
+                )
+                findings.extend(sub_findings)
+                sc = max(sc, sub_sc)
+                # Surface sub-chunk failures under the parent's reconciliation
+                if stats and f"{label}[{chunk_idx}.{j}]" in stats.failed_chunk_ids:
+                    stats.failed_chunk_ids.append(f"{label}[{chunk_idx}]")
         return findings, sc
     except _LLMFailure as e:
+        if e.kind == "fatal":
+            raise FatalLLMError(
+                f"gateway rejected the request and this error is not retryable "
+                f"(status={e.status}). Check ANTHROPIC_MODEL / credentials. Original: {e}"
+            ) from e
         raw_info = ""
         if e.raw:
             p = _write_raw_debug(report_dir, label, chunk_idx, e.raw)
@@ -999,24 +1118,58 @@ def analyze_files(report_dir: Path, host: str, **llm_kw) -> list[dict]:
 
     LOGGER.info("analysing %d scan artefact(s) …", len(inputs))
 
-    for label, raw_content in inputs:
+    while inputs:
+        label, raw_content = inputs.pop(0)
         LOGGER.info("→ %s (%d chars)", label, len(raw_content))
 
-        # Part F: pre-count expected findings
-        expected = _count_expected_findings(label, raw_content)
+        # OOM guard: artefacts beyond this size are never parsed into memory
+        size = len(raw_content.encode())
+        if size > MAX_ARTEFACT_BYTES:
+            notice = (f"⚠️ {label}: artefact too large for LLM analysis "
+                      f"({size:,} bytes > {MAX_ARTEFACT_BYTES:,} limit) — "
+                      f"raw file attached for manual review.")
+            LOGGER.error(notice)
+            incomplete_notices.append(notice)
+            reconciliation[label] = {"expected": 0, "model_reported": 0,
+                                     "extracted": 0, "status": "skipped_too_large",
+                                     "failed_chunks": []}
+            if stats:
+                stats.file_findings[label] = 0
+                stats.reconciliation[label] = reconciliation[label]
+            raw_content = ""
+            continue
 
-        # Part G: severity filter
-        filtered_content, kept, dropped = _apply_severity_filter(label, raw_content)
-
-        # Part A: structural chunking
-        chunks = _smart_chunks(label, filtered_content)
-        LOGGER.info("%s → %d chunk(s) after filter+split", label, len(chunks))
+        # Part G+A: filter & chunk.  trivy.json is streamed (parse ONCE, yield
+        # chunks lazily) — materialising it fully is what OOM-killed the 2026-09-08 run.
+        if label == "trivy.json":
+            expected, chunks_iter = _trivy_expected_and_chunks(
+                raw_content, _safe_chunk_bytes(), label)
+            if chunks_iter is not None:
+                raw_content = ""  # release the raw string before the LLM loop
+            else:
+                LOGGER.warning("%s: not valid trivy JSON — generic chunking", label)
+                expected = _count_expected_findings(label, raw_content)
+                chunks_iter = _smart_chunks(label, raw_content)
+        else:
+            expected = _count_expected_findings(label, raw_content)
+            filtered_content, kept, dropped = _apply_severity_filter(label, raw_content)
+            raw_content = ""
+            chunks_iter = _smart_chunks(label, filtered_content)
+            LOGGER.info("%s → %d chunk(s) after filter+split", label, len(chunks_iter))
 
         file_findings: list[dict] = []
         file_source_count = 0
         failed_chunk_indices: list[int] = []
+        cap_hit = False
 
-        for idx, chunk_text in enumerate(chunks):
+        for idx, chunk_text in enumerate(chunks_iter):
+            if idx >= MAX_CHUNKS_PER_FILE:
+                cap_hit = True
+                LOGGER.error(
+                    "⚠️  %s exceeded MAX_CHUNKS_PER_FILE=%d — remaining chunks "
+                    "NOT analysed (recorded in reconciliation, not dropped silently)",
+                    label, MAX_CHUNKS_PER_FILE)
+                break
             findings, sc = _process_single_chunk(
                 chunk_text, label, idx, host, report_dir,
                 use_cache=use_cache,
@@ -1025,17 +1178,22 @@ def analyze_files(report_dir: Path, host: str, **llm_kw) -> list[dict]:
             )
             file_findings.extend(findings)
             file_source_count = max(file_source_count, sc)
-            if not findings and sc == 0:
-                # Distinguish genuine empty vs failure by checking stats
-                if stats and f"{label}[{idx}]" in stats.failed_chunk_ids:
-                    failed_chunk_indices.append(idx)
+            if stats and f"{label}[{idx}]" in stats.failed_chunk_ids:
+                failed_chunk_indices.append(idx)
+
+        if cap_hit:
+            failed_chunk_indices.append(-1)  # sentinel: chunk-count cap hit
 
         # Part F: reconcile
         extracted = len(file_findings)
         status = "complete"
         if failed_chunk_indices or (file_source_count > 0 and extracted < file_source_count):
             status = "incomplete"
-            notice = _incomplete_notice(label, failed_chunk_indices, extracted, file_source_count)
+            if cap_hit:
+                notice = (f"⚠️ {label}: more than {MAX_CHUNKS_PER_FILE} chunks — "
+                          f"remaining chunks not analysed; raw file attached for manual review.")
+            else:
+                notice = _incomplete_notice(label, failed_chunk_indices, extracted, file_source_count)
             incomplete_notices.append(notice)
             LOGGER.warning("⚠️  %s", notice)
 
@@ -1108,6 +1266,8 @@ def combine_findings(all_findings: list[dict], host: str, **llm_kw) -> str | Non
                 MAX_TOKENS_COMBINE, temperature, top_p, stats,
             )
         except _LLMFailure as e:
+            if e.kind == "fatal":
+                raise FatalLLMError(f"Ollama rejected combine (status={e.status}): {e}") from e
             LOGGER.error("combine Ollama failure: %s", e)
     elif client:
         try:
@@ -1116,6 +1276,8 @@ def combine_findings(all_findings: list[dict], host: str, **llm_kw) -> str | Non
                 client, model, system, user, MAX_TOKENS_COMBINE, stats, False,
             )
         except _LLMFailure as e:
+            if e.kind == "fatal":
+                raise FatalLLMError(f"gateway rejected combine (status={e.status}): {e}") from e
             LOGGER.error("combine Claude failure: %s", e)
 
     if text and notices:
@@ -1371,8 +1533,20 @@ def main():
         stats=stats, scan_id=scan_id,
     )
 
-    all_findings = analyze_files(report_dir, args.host, **llm_kw)
-    threat_brief = combine_findings(all_findings, args.host, **llm_kw)
+    try:
+        all_findings = analyze_files(report_dir, args.host, **llm_kw)
+        threat_brief = combine_findings(all_findings, args.host, **llm_kw)
+    except FatalLLMError as e:
+        # Non-retryable config/gateway error (wrong model name, bad key, …).
+        # Post the raw artefacts with an honest error instead of a fake summary,
+        # then fail loudly so run_scan.sh / cron report the failure.
+        LOGGER.error("FATAL — aborting fast (retrying cannot help): %s", e)
+        try:
+            post_fallback_to_slack(channel, f"LLM configuration error: {e}", report_dir, args.host)
+        except Exception as slack_exc:
+            LOGGER.error("could not post fallback to Slack: %s", slack_exc)
+        LOGGER.info("SUMMARY %s", json.dumps(stats.summary(), sort_keys=True))
+        sys.exit(1)
 
     if threat_brief is None:
         LOGGER.warning("LLM unavailable — no summary generated")

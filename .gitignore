@@ -3,3 +3,6 @@ secrets/*.txt
 reports/
 best/
 graphify-out/
+__pycache__/
+*.pyc
+*_backup/
