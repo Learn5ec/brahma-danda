@@ -19,16 +19,51 @@ is required because a busy host with many Critical/High findings can produce
 a long structured brief.
 """
 
+import os as _os
+
+
+def _env_int(name: str) -> int:
+    """Positive int from env, 0 if unset/invalid."""
+    try:
+        v = int(_os.environ.get(name, "") or 0)
+    except ValueError:
+        return 0
+    return v if v > 0 else 0
+
+
 # ── Output token budgets ────────────────────────────────────────────────────────
-MAX_TOKENS_PER_FILE: int = 4_096   # Per-artefact findings extraction
-                                    # (raised from 2 048 to reduce truncation events)
-MAX_TOKENS_COMBINE: int = 8_192    # Final merged Threat Brief
+# CLAUDE_CODE_MAX_OUTPUT_TOKENS (same knob the Claude Code CLI uses against this
+# gateway) overrides the per-call output cap when set. Larger cap = fewer
+# max_tokens truncations → fewer continuation/re-chunk passes.
+_MAX_OUTPUT_TOKENS = _env_int("CLAUDE_CODE_MAX_OUTPUT_TOKENS")
+
+MAX_TOKENS_PER_FILE: int = _MAX_OUTPUT_TOKENS or 4_096   # Per-artefact findings extraction
+                                                          # (default raised from 2 048)
+# COMBINE: if gateway enforces an output cap, match it; otherwise default 8192.
+MAX_TOKENS_COMBINE: int = (_MAX_OUTPUT_TOKENS or 8_192)
 
 # ── Input size constants (used by the chunker in remediate.py) ─────────────────
 # See the arithmetic above for how MODEL_SAFE_INPUT_BYTES is derived.
 # GATEWAY_MAX_BODY_BYTES comes from GATEWAY_MAX_BODY_BYTES env var (default 1 MB
 # — conservative, unverified; remediate.py will warn loudly if using the default).
-MODEL_SAFE_INPUT_BYTES: int = 770_000   # chars ≈ bytes for ASCII-dominant scan output
+#
+# CLAUDE_CODE_MAX_CONTEXT_TOKENS overrides the context-window assumption.
+# IMPORTANT — chars/token: the 4 chars/token rule above is optimistic for our
+# payload. Measured live against this gateway on 2026-09-09: a 29.4 MB trivy
+# chunk counted as 9.52M tokens → ~3.1 chars/token for JSON scan output.
+# We budget at 3 chars/token (worst case) and subtract the output budget:
+#   input_bytes = (context_tokens - output_tokens - 10K reserve) * 3
+# e.g. (200000 - 56000 - 10000) * 3 = 402 000 bytes.
+_MAX_CONTEXT_TOKENS = _env_int("CLAUDE_CODE_MAX_CONTEXT_TOKENS")
+
+if _MAX_CONTEXT_TOKENS:
+    _reserve = 10_000  # system prompt + tool schema + slack
+    _input_tokens = _MAX_CONTEXT_TOKENS - _MAX_OUTPUT_TOKENS - _reserve
+    if _input_tokens < 10_000:
+        _input_tokens = 10_000  # never let the arithmetic starve the chunker
+    MODEL_SAFE_INPUT_BYTES: int = _input_tokens * 3
+else:
+    MODEL_SAFE_INPUT_BYTES: int = 770_000   # chars ≈ bytes (legacy assumption, ~4 c/t)
 
 # Legacy compat — still exported so any code that imported MAX_RAW_CHARS_PER_FILE
 # before this refactor doesn't break at import time (remove after one sprint).
@@ -82,9 +117,10 @@ REPORT_FINDINGS_TOOL: dict = {
             "source_finding_count": {
                 "type": "integer",
                 "description": (
-                    "Total number of discrete issues you identified in the input, "
-                    "including any you could not fully detail — used to verify nothing "
-                    "was silently dropped. Must be >= len(findings)."
+                    "Self-check: the number of findings in the findings array "
+                    "(must equal len(findings)). Used to detect truncation. "
+                    "Must be >= len(findings); if you intend more than you listed, "
+                    "the payload was cut off."
                 ),
             },
         },
@@ -105,9 +141,9 @@ File-specific guidance (BE EXHAUSTIVE — extract EVERY finding at Critical/High
 - ssh_checks.json / nginx_checks.json / docker_checks.json: extract ALL pass/fail items at Critical/High severity.
 - trivy.json: extract ALL CVEs at CRITICAL/HIGH severity. This file may be large — extract every CVE found.
 - debsecan.txt: extract Debian tracker CVEs at CRITICAL/HIGH severity.
-- ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or public IPs without firewall protection.
+- ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or *: (reachable from any network unless a firewall says otherwise — and THIS file alone cannot prove firewall protection, so never suppress a bind for lack of it). Loopback-only binds (127.0.0.1/::1) are NOT findings.
 - ufw_status.txt: flag if UFW is inactive, missing, or has no default deny policy.
-- iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies.
+- iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies (INPUT ACCEPT with no rules = no filtering — flag it).
 - nftables.txt: flag missing default deny policies, open ports without rules, or permissive policies.
 - lynis-report.dat: extract ALL items marked [WARNING], [TIP], or [FAILED]. Do not skip any.
 - nmap.xml / nmap.txt: extract ALL vulnerable services, open ports with risky scripts, or misconfigurations.
@@ -120,7 +156,7 @@ Rules:
 - Every finding must have concrete evidence anchored to the source file (filename + location + exact value).
 - If no findings at those severities exist, call report_findings with an empty findings array.
 - When in doubt, include the finding. Over-inclusion is better than under-inclusion.
-- Set source_finding_count to the total number of discrete issues you saw (including any you omitted).
+- Set source_finding_count to len(findings). If the real count is higher the payload was truncated.
 """
 
 # Prose-JSON fallback prompt (used when the gateway does not support tool-use).
@@ -138,9 +174,9 @@ File-specific guidance (BE EXHAUSTIVE — extract EVERY finding at Critical/High
 - ssh_checks.json / nginx_checks.json / docker_checks.json: extract ALL pass/fail items at Critical/High severity.
 - trivy.json: extract ALL CVEs at CRITICAL/HIGH severity. This file is large — extract every CVE found.
 - debsecan.txt: extract Debian tracker CVEs at CRITICAL/HIGH severity.
-- ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or public IPs without firewall protection.
+- ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or *: (reachable from any network unless a firewall says otherwise — and THIS file alone cannot prove firewall protection, so never suppress a bind for lack of it). Loopback-only binds (127.0.0.1/::1) are NOT findings.
 - ufw_status.txt: flag if UFW is inactive, missing, or has no default deny policy.
-- iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies.
+- iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies (INPUT ACCEPT with no rules = no filtering — flag it).
 - nftables.txt: flag missing default deny policies, open ports without rules, or permissive policies.
 - lynis-report.dat: extract ALL items marked [WARNING], [TIP], or [FAILED]. Do not skip any.
 - nmap.xml / nmap.txt: extract ALL vulnerable services, open ports with risky scripts, or misconfigurations.
@@ -151,7 +187,7 @@ Rules:
 - Do NOT put fix commands inside risk/evidence; "recommendation" is optional.
 - Every finding must have concrete evidence anchored to the source file.
 - If no findings exist, return {"findings": [], "source_finding_count": 0}.
-- Set source_finding_count to total issues seen (including omitted ones).
+- Set source_finding_count to len(findings). If the real count is higher the payload was truncated.
 """
 
 

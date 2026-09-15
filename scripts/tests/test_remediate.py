@@ -229,6 +229,20 @@ class TestTrivyStreaming(unittest.TestCase):
                 seen = True
         self.assertTrue(seen)
 
+    def test_meta_whitelist_excludes_packages(self):
+        """The Result-level 'Packages' list can be multi-MB (observed: 29 MB on
+        2487-package host).  The whitelist must NOT re-embed it into every chunk."""
+        raw = trivy_json(5)
+        _, chunks_iter = r._trivy_expected_and_chunks(raw, 5000, "trivy.json")
+        for chunk in chunks_iter:
+            parsed = json.loads(chunk)
+            self.assertIn("Vulnerabilities", parsed)
+            # The dangerous key — must never appear at Result level in a chunk
+            self.assertNotIn("Packages", parsed)
+            # Description must not be present (stripped per-vuln)
+            for v in parsed["Vulnerabilities"]:
+                self.assertNotIn("Description", v)
+
 
 # ---------------------------------------------------------------------------
 # Part D — exception classification
@@ -283,6 +297,19 @@ class TestExceptionClassification(unittest.TestCase):
         """Error may come back in the response body, not the status line."""
         err = Exception("{'status': 'Error', 'code': 404, 'message': 'model not found'}")
         self.assertEqual(self._classify(err), "fatal")
+
+    def test_context_length_is_gateway_rejection_not_transient(self):
+        """vLLM wraps context-length errors in HTTP 200 (status=None on the SDK
+        exception). The previous 'transient' classification caused 4 × 60s retries
+        on the same 9.5M-token trivy chunk (2026-09-09) with no change.  Now
+        classifies as gateway_rejection so the caller can re-chunk at half size."""
+        for msg in [
+            "The input (9520128 tokens) is longer than the model's context length (262144 tokens).",
+            "context_length_exceeded: 400000 > 262144",
+            "context length exceeded",
+        ]:
+            err = Exception(msg)
+            self.assertEqual(self._classify(err), "gateway_rejection", msg)
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +378,26 @@ class TestContinuation(unittest.TestCase):
         self.assertIsNone(rechunk)
         self.assertEqual(sc, 1)
 
+    def test_truncated_unparseable_tool_use_signals_rechunk(self):
+        """max_tokens cut mid tool_use block → response has NO content blocks
+        and NO text.  Before the 2026-09-14 fix this returned ([], 0, None)
+        SILENTLY (trivy.json: two 519 KB chunks truncated at the old 4096
+        output cap → 'no findings', zero log lines, data dropped).  Now the
+        chunk must be handed back for re-chunking."""
+        from types import SimpleNamespace
+        resp = SimpleNamespace(
+            content=[], stop_reason="max_tokens",
+            usage=SimpleNamespace(cache_read_input_tokens=0,
+                                  cache_creation_input_tokens=0))
+        client = _stream_client([resp])
+        user = "Host: t\n\n=== FILE CONTENT ===\ncontent here"
+        findings, sc, rechunk = r._call_with_continuation(
+            client, "coder", _p.PER_FILE_SYSTEM_PROMPT, user,
+            "test.txt", 0, Path("/tmp"), 512, None, False, True)
+        self.assertEqual(findings, [])
+        self.assertIsNotNone(rechunk)
+        self.assertIn("content here", rechunk)
+
 
 # ---------------------------------------------------------------------------
 # Part C — f["risk"] → f.get("risk") KeyError fix
@@ -408,6 +455,45 @@ class TestFatalFastFail(unittest.TestCase):
         self.assertEqual(client.messages.stream.call_count, 3)  # initial + 2 patched retries
         self.assertEqual(stats.failed_chunk_ids, ["test.txt[0]"])
 
+    def test_context_length_error_rechunks_instead_of_failing(self):
+        """vLLM wraps context-length rejections in HTTP 200 with message "longer
+        than the model's context length".  This must NOT be retried 4× (observed
+        2026-09-09: every 9.5M-token trivy chunk burned all retries) and must NOT
+        fail the data — the chunk is re-chunked smaller and processed again."""
+        err = Exception(
+            "Error code: 200 - {'type': 'error', 'error': {'type': 'invalid_request_error', "
+            "'message': \"The input (9520128 tokens) is longer than the model's context "
+            "length (262144 tokens).\"}}")
+        err.status_code = 200
+
+        # First call rejects as oversized; the re-chunked retry succeeds.
+        good = _tool_response(
+            [{"severity": "high", "risk": "recovered", "evidence": "x"}], 1, "end_turn")
+        state = {"n": 0}
+
+        def _stream_effect(**kwargs):
+            state["n"] += 1
+            if state["n"] == 1:
+                raise err
+            cm = MagicMock()
+            cm.__enter__.return_value.get_final_message.return_value = good
+            cm.__exit__.return_value = False
+            return cm
+
+        client = MagicMock()
+        client.messages.stream.side_effect = _stream_effect
+        stats = r.ScanStats()
+        with patch.object(r, "RETRY_DELAYS", [0.0]):
+            findings, sc = r._process_single_chunk(
+                "some content", "test.txt", 0, "host", Path("/tmp/bd-test"),
+                client=client, model="coder", stats=stats,
+            )
+        # Exactly 2 calls: the rejected one + the re-chunked retry (NOT 5 = 1+4 retries)
+        self.assertEqual(state["n"], 2)
+        self.assertEqual(stats.failed_chunk_ids, [])   # data recovered, not dropped
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(stats.truncation_events, 1)   # counted as a size-driven resplit
+
 
 # ---------------------------------------------------------------------------
 # Part F — reconciliation
@@ -453,7 +539,9 @@ class TestPrompts(unittest.TestCase):
 
     def test_max_tokens_combine_defined(self):
         self.assertIsInstance(_p.MAX_TOKENS_COMBINE, int)
-        self.assertGreater(_p.MAX_TOKENS_COMBINE, _p.MAX_TOKENS_PER_FILE)
+        # When the gateway enforces a per-call output cap, both use the same budget.
+        # Without an override both are defined and at least non-zero.
+        self.assertGreaterEqual(_p.MAX_TOKENS_COMBINE, _p.MAX_TOKENS_PER_FILE)
 
 
 # ---------------------------------------------------------------------------
@@ -488,6 +576,147 @@ class TestConstants(unittest.TestCase):
 
     def test_safe_chunk_bytes_nonzero(self):
         self.assertGreater(r._safe_chunk_bytes(), 0)
+
+
+# ---------------------------------------------------------------------------
+# Slack helpers — _mrkdwn_block_chunks + post_to_slack
+# ---------------------------------------------------------------------------
+
+class TestMrkdwnBlockChunks(unittest.TestCase):
+    """The 2026-09-14 Threat Brief vanished because continuation blocks were
+    sliced at exactly 3000 chars and then the 15-char `_(continued)_\\n\\n`
+    prefix pushed the block to 3014 chars, exceeding Slack's hard limit.
+    Every chunk returned by _mrkdwn_block_chunks must individually fit ≤ 3000.
+    """
+
+    def test_empty_returns_empty(self):
+        self.assertEqual(r._mrkdwn_block_chunks(""), [])
+
+    def test_single_short_text_returns_one_piece(self):
+        pieces = r._mrkdwn_block_chunks("hello")
+        self.assertEqual(len(pieces), 1)
+        self.assertEqual(pieces[0], "hello")
+
+    def test_exactly_3000_chars_one_piece(self):
+        text = "x" * 3000
+        pieces = r._mrkdwn_block_chunks(text)
+        self.assertEqual(len(pieces), 1)
+        self.assertEqual(len(pieces[0]), 3000)
+
+    def test_3001_chars_two_pieces_prefix_on_second(self):
+        text = "x" * 3001
+        pieces = r._mrkdwn_block_chunks(text)
+        self.assertEqual(len(pieces), 2)
+        self.assertEqual(pieces[0], "x" * 3000)
+        self.assertTrue(pieces[1].startswith("_(continued)_\n\n"))
+        # second piece total ≤ 3000
+        self.assertLessEqual(len(pieces[1]), 3000)
+
+    def test_every_chunk_individually_fits_limit(self):
+        # Stress: arbitrary length — every piece must individually be ≤ 3000
+        for n in [1, 100, 500, 1500, 2999, 3000, 3001, 5000, 9999]:
+            text = "a" * n
+            for piece in r._mrkdwn_block_chunks(text):
+                self.assertLessEqual(
+                    len(piece), 3000,
+                    f"n={n}: piece of {len(piece)} chars exceeds 3000: {piece[:50]!r}")
+
+    def test_7915_char_brief_like_20260914(self):
+        # The real brief that disappeared on 2026-09-14 was 7915 chars
+        text = "x" * 7915
+        pieces = r._mrkdwn_block_chunks(text)
+        # Slack's 3000 limit + 15-char prefix = max 2985 usable chars per cont block
+        # 3000 + 2985 = 5985; 7915 - 5985 = 1930; round-trip
+        self.assertEqual(len(pieces), 3)
+        for p in pieces:
+            self.assertLessEqual(len(p), 3000)
+        rejoined = "".join(p.replace("_(continued)_\n\n", "") for p in pieces)
+        self.assertEqual(rejoined, text)
+
+    def test_roundtrip_preserves_all_chars(self):
+        text = "".join(chr(i % 95 + 32) for i in range(20000))
+        pieces = r._mrkdwn_block_chunks(text)
+        rejoined = "".join(p.replace("_(continued)_\n\n", "") for p in pieces)
+        self.assertEqual(rejoined, text)
+
+
+class TestPostToSlack(unittest.TestCase):
+    """post_to_slack must check the `ok` field — Slack delivers API errors as
+    HTTP 200 + {"ok": false}, so raise_for_status() never sees them (the 2026-09-14
+    brief silently vanished with exit code 0).
+    """
+
+    def _fake_secret(self, token="tok123"):
+        return patch("remediate.read_secret", return_value=token)
+
+    @patch("remediate.requests.post")
+    @patch("remediate.upload_file_to_slack")
+    @patch("remediate.copy_reports_to_local")
+    @patch("remediate._write_raw_debug")
+    def test_ok_false_blocks_raises_runtime_error(
+            self, _debug, _copy, _upload, _post):
+        _post.return_value = MagicMock(
+            raise_for_status=MagicMock(),
+            json=MagicMock(return_value={"ok": False, "error": "invalid_blocks"}),
+        )
+        with self._fake_secret():
+            with self.assertRaises(RuntimeError) as ctx:
+                r.post_to_slack("C0", "Threat Brief text", Path("/tmp"), "host")
+        self.assertIn("invalid_blocks", str(ctx.exception))
+        _debug.assert_called_once()   # raw text saved for forensics
+
+    @patch("remediate.requests.post")
+    @patch("remediate.upload_file_to_slack")
+    @patch("remediate.copy_reports_to_local")
+    def test_ok_false_then_ok_true_retries_and_succeeds(
+            self, _copy, _upload, _post):
+        _post.side_effect = [
+            MagicMock(
+                raise_for_status=MagicMock(),
+                json=MagicMock(return_value={"ok": False, "error": "invalid_blocks"}),
+            ),
+            MagicMock(
+                raise_for_status=MagicMock(),
+                json=MagicMock(return_value={"ok": True, "ts": "123.456"}),
+            ),
+            # thread-update notice (fires after retry succeeds)
+            MagicMock(
+                raise_for_status=MagicMock(),
+                json=MagicMock(return_value={"ok": True}),
+            ),
+        ]
+        with self._fake_secret():
+            r.post_to_slack("C0", "Threat Brief text", Path("/tmp"), "host")  # no raise
+
+    @patch("remediate.requests.post")
+    @patch("remediate.upload_file_to_slack")
+    @patch("remediate.copy_reports_to_local")
+    def test_ok_true_returns_true(self, _copy, _upload, _post):
+        _post.return_value = MagicMock(
+            raise_for_status=MagicMock(),
+            json=MagicMock(return_value={"ok": True, "ts": "123.456"}),
+        )
+        with self._fake_secret():
+            r.post_to_slack("C0", "Threat Brief text", Path("/tmp"), "host")
+
+    @patch("remediate.requests.post")
+    @patch("remediate.upload_file_to_slack")
+    @patch("remediate.copy_reports_to_local")
+    def test_thread_update_ok_flag_checked(self, _copy, _upload, _post):
+        # When len(slack_text) > 1500 the cleanup update is sent; check its ok is checked
+        _post.side_effect = [
+            MagicMock(
+                raise_for_status=MagicMock(),
+                json=MagicMock(return_value={"ok": True, "ts": "123.456"}),
+            ),
+            MagicMock(
+                raise_for_status=MagicMock(),
+                json=MagicMock(return_value={"ok": False, "error": "channel_not_found"}),
+            ),
+        ]
+        with self._fake_secret():
+            # Should not raise — thread-update failure is warned, not fatal
+            r.post_to_slack("C0", "x" * 1600, Path("/tmp"), "host")
 
 
 if __name__ == "__main__":

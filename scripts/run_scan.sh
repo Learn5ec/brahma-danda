@@ -104,20 +104,34 @@ else
   echo "[run_scan] Java DB already cached — skipping download."
 fi
 
+# slack_notify TEXT — post a run_scan notification to Slack and CHECK the
+# response. Slack returns API errors as HTTP 200 + {"ok": false}, so a bare
+# `curl -s ... >/dev/null` posts blind (2026-09-14: notifications silently
+# vanished). Logs the error code on rejection; never fails the scan.
+slack_notify() {
+    local _tok=$(cat /run/secrets/slack_bot_token 2>/dev/null)
+    local _ch="${SLACK_CHANNEL_ID:-}"
+    [ -z "$_tok" ] || [ -z "$_ch" ] && return 0
+    local _body
+    _body=$(jq -n --arg c "$_ch" --arg t "$1" '{channel:$c,text:$t}') || { echo "[run_scan] WARNING: could not build Slack JSON" >&2; return 0; }
+    local _resp
+    _resp=$(curl -s --connect-timeout 10 --max-time 30 \
+        -X POST "https://slack.com/api/chat.postMessage" \
+        -H "Authorization: Bearer ${_tok}" \
+        -H "Content-Type: application/json" \
+        -d "$_body" 2>/dev/null)
+    case "$_resp" in
+        *'"ok":true'*) : ;;
+        *) echo "[run_scan] WARNING: Slack notification rejected: ${_resp:-<no response>}" >&2 ;;
+    esac
+}
+
 # ── Cache refresh complete — exit before actual scan ──
 if [ "$REFRESH_CACHE" = true ]; then
     echo "[run_scan] cache refresh complete"
     # Send Slack notification
-    SLACK_TOKEN=$(cat /run/secrets/slack_bot_token 2>/dev/null)
-    CHANNEL="${SLACK_CHANNEL_ID:-}"
-    if [ -n "$SLACK_TOKEN" ] && [ -n "$CHANNEL" ]; then
-        curl -s --connect-timeout 10 --max-time 30 \
-            -X POST "https://slack.com/api/chat.postMessage" \
-            -H "Authorization: Bearer ${SLACK_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":arrows_counterclockwise: *Java DB cache refreshed* for ${HOST_LABEL}\nThe Trivy Java vulnerability database has been successfully updated with the latest signatures. Next scan will use fresh data.\"}" \
-            >/dev/null 2>&1 || echo "[run_scan] failed to post cache refresh notification"
-    fi
+    slack_notify ":arrows_counterclockwise: *Java DB cache refreshed* for ${HOST_LABEL}
+The Trivy Java vulnerability database has been successfully updated with the latest signatures. Next scan will use fresh data."
     exit 0
 fi
 
@@ -161,15 +175,24 @@ echo "[run_scan] running lynis..."
 lynis audit system --quick --pentest --logfile "${REPORT_DIR}/lynis.log" --report-file "${REPORT_DIR}/lynis-report.dat" > /dev/null 2>&1 || true
 
 # ── 3.2 Network Exposure / Firewall ──
-# These read-only probes need root, so run them via the NOPASSWD sudoers entry
-# (the scan user is now UID 999, not root). All four are strictly read-only —
-# they report the host's state, never change it. The redirection opens the
-# report file as 999 first, so the files stay owned by the scan user.
-echo "[run_scan] gathering network exposure and firewall data..."
-sudo ss -tlnp > "${REPORT_DIR}/ss_listeners.txt" 2>/dev/null || ss -tln > "${REPORT_DIR}/ss_listeners.txt"
-sudo ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo "ufw not found or insufficient permissions" > "${REPORT_DIR}/ufw_status.txt"
-sudo iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
-sudo nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
+# These read-only probes need root.  The container runs as user: "0" (root), so
+# sudo is normally NOT needed — and is in fact BROKEN here: docker-compose sets
+# cap_drop: ALL (keeping only NET_RAW/NET_ADMIN/DAC_*), which removes CAP_SETUID,
+# so sudo dies with "PERM_SUDOERS: setresuid(...): Operation not permitted" and
+# every probe fell back to an error string (observed 2026-09-09: ufw/iptables/
+# nftables artefacts were blank).  Resolve the privilege prefix ONCE: empty when
+# already root (or sudo missing), "sudo" only when unprivileged and sudo exists
+# (a future UID-999 deployment). All four probes are strictly read-only.
+if [ "$(id -u)" -eq 0 ] || ! command -v sudo >/dev/null 2>&1; then
+  SUDO=""
+else
+  SUDO="sudo"
+fi
+echo "[run_scan] gathering network exposure and firewall data (privilege prefix: '${SUDO:-<none>}')..."
+${SUDO} ss -tlnp > "${REPORT_DIR}/ss_listeners.txt" 2>/dev/null || ss -tln > "${REPORT_DIR}/ss_listeners.txt"
+${SUDO} ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo "ufw not found or insufficient permissions" > "${REPORT_DIR}/ufw_status.txt"
+${SUDO} iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
+${SUDO} nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
 
 # ── 4. nmap — self-scan of THIS host's real listening ports (needs network_mode: host,
 #    see docker-compose.yml for the documented trade-off). Safe script categories by
@@ -273,19 +296,11 @@ SLACK_TOKEN=$(cat /run/secrets/slack_bot_token 2>/dev/null)
 CHANNEL="${SLACK_CHANNEL_ID:-}"
 if [ -n "$SLACK_TOKEN" ] && [ -n "$CHANNEL" ]; then
     if [ $REMEDIATE_EXIT -eq 0 ]; then
-        curl -s --connect-timeout 10 --max-time 30 \
-            -X POST "https://slack.com/api/chat.postMessage" \
-            -H "Authorization: Bearer ${SLACK_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":white_check_mark: *Scan completed successfully* for ${HOST_LABEL}\nReports and remediation plan posted to Slack.\"}" \
-            >/dev/null 2>&1 || echo "[run_scan] failed to post scan completion notification"
+        slack_notify ":white_check_mark: *Scan completed successfully* for ${HOST_LABEL}
+Reports and remediation plan posted to Slack."
     else
-        curl -s --connect-timeout 10 --max-time 30 \
-            -X POST "https://slack.com/api/chat.postMessage" \
-            -H "Authorization: Bearer ${SLACK_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"channel\":\"${CHANNEL}\",\"text\":\":x: *Scan failed* for ${HOST_LABEL}\nRemediation step exited with code ${REMEDIATE_EXIT}. Check logs for details.\"}" \
-            >/dev/null 2>&1 || echo "[run_scan] failed to post scan failure notification"
+        slack_notify ":x: *Scan failed* for ${HOST_LABEL}
+Remediation step exited with code ${REMEDIATE_EXIT}. Check logs for details."
     fi
 fi
 

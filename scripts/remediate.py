@@ -42,8 +42,10 @@ LOGGER = logging.getLogger("brahma-danda.remediate")
 #   context window  200 000 tokens
 #   reserved output   4 096 tokens  (MAX_TOKENS_PER_FILE)
 #   reserved prompt   1 000 tokens  (system prompt + tool schema)
-#   available input 194 904 tokens × 4 chars/token ≈ 779 616 chars
-#   → rounded down to 770 000 for safety
+#   available input = context − output − reserve, at 3 chars/token (measured
+#   live 2026-09-09: gateway vLLM counts JSON scan output at ~3.1 chars/token)
+#   → MODEL_SAFE_INPUT_BYTES in prompts.py (env-driven when
+#     CLAUDE_CODE_MAX_CONTEXT_TOKENS / CLAUDE_CODE_MAX_OUTPUT_TOKENS are set)
 #
 # GATEWAY_MAX_BODY_BYTES: read from env; default 1 MB (conservative/unverified).
 #   Binary-search against the real gateway if this fires 413s frequently.
@@ -61,11 +63,16 @@ def _gateway_max_body_bytes() -> int:
             return int(raw)
         except ValueError:
             pass
-    LOGGER.warning(
-        "GATEWAY_MAX_BODY_BYTES not set — defaulting to 1 000 000 bytes (1 MB). "
-        "This is a conservative UNVERIFIED default. Binary-search the real gateway "
-        "limit and set this env var to avoid unnecessary over-chunking."
-    )
+    # If CLAUDE_CODE_MAX_CONTEXT_TOKENS is set, MODEL_SAFE_INPUT_BYTES (and thus
+    # _safe_chunk_bytes) is already sized correctly — no need to warn about the
+    # old GATEWAY_MAX_BODY_BYTES knob.
+    if not os.environ.get("CLAUDE_CODE_MAX_CONTEXT_TOKENS"):
+        LOGGER.warning(
+            "GATEWAY_MAX_BODY_BYTES not set — defaulting to 1 000 000 bytes (1 MB). "
+            "This is a conservative UNVERIFIED default. Set CLAUDE_CODE_MAX_CONTEXT_TOKENS "
+            "(and CLAUDE_CODE_MAX_OUTPUT_TOKENS) in .env to size chunks from the model's "
+            "actual context window instead."
+        )
     return 1_000_000
 
 def _safe_chunk_bytes() -> int:
@@ -215,6 +222,13 @@ _LYNIS_SKIP_PREFIXES = ("suggestion[", "manual[", "hardening_index")
 _TRIVY_FIELDS = ("VulnerabilityID", "PkgName", "InstalledVersion",
                  "FixedVersion", "Severity", "Title")
 
+# Only these Result-level keys are safe to re-embed in EVERY chunk.  The full
+# metadata block is NOT: observed live, "Packages" (one entry per installed
+# package, ~29 MB on a 2487-package host) was copied into both chunks, turning
+# two ~539 KB chunks into two ~29 MB requests (9.5M tokens > 262K context →
+# trivy.json produced ZERO findings on 2026-09-09).
+_TRIVY_META_KEYS = ("Target", "Class", "Type")
+
 
 def _trivy_expected_and_chunks(raw: str, target_bytes: int, label: str):
     """Stream-parse trivy.json ONCE and lazily yield chunk strings.
@@ -240,7 +254,10 @@ def _trivy_expected_and_chunks(raw: str, target_bytes: int, label: str):
     def _gen():
         kept = 0
         for result in data["Results"]:
-            meta = {k: v for k, v in result.items() if k != "Vulnerabilities"}
+            # Whitelist (NOT "everything but Vulnerabilities"): the Result also
+            # carries a multi-MB "Packages" list — copying it into every chunk
+            # is what blew 539 KB chunks up to 29 MB on 2026-09-09.
+            meta = {k: result[k] for k in _TRIVY_META_KEYS if k in result}
             cur, cur_bytes = [], 0
             for v in result.get("Vulnerabilities") or []:
                 if str(v.get("Severity", "")).upper() not in _TRIVY_KEEP:
@@ -586,6 +603,14 @@ def _classify_exception(exc: Exception) -> str:
     body = str(getattr(exc, "message", "") or getattr(exc, "body", "") or exc).lower()
     if status == 413 or "payload too large" in body or "request entity too large" in body:
         return "gateway_rejection"
+    # Context-length rejection (observed live: vLLM returns it wrapped in HTTP
+    # 200 with invalid_request_error). Retrying changes nothing — the same
+    # tokens always exceed the window. Route to gateway_rejection so
+    # _process_single_chunk re-chunks the oversized chunk at half size instead
+    # of burning 4 attempts on it (observed: 9.5M-token trivy chunks retried
+    # per chunk on 2026-09-09).
+    if "context_length_exceeded" in body or "context length" in body:
+        return "gateway_rejection"
     # Non-retryable: auth / model / request-shape errors. Retrying cannot fix
     # these — observed live when a wrong model name (404) was retried per chunk.
     if status in (400, 401, 403, 404, 422) \
@@ -830,7 +855,25 @@ def _call_with_continuation(
                 p = _write_raw_debug(report_dir, label, chunk_idx, fallback_text)
                 LOGGER.warning("⚠️  %s[%d] tool_use block missing — raw saved to %s",
                                label, chunk_idx, p)
-            return all_findings, source_count, None
+            elif stop_reason in ("max_tokens", "length"):
+                # Output truncated MID tool_use block: no complete block and no
+                # text — the payload is unusable.  This was silent on 2026-09-14
+                # (trivy.json chunks cut at 4096 output tokens → "no findings"
+                # with zero log lines).  Signal a re-chunk so the data is
+                # re-processed smaller instead of dropped.
+                if stats:
+                    stats.truncation_events += 1
+                LOGGER.warning(
+                    "⚠️  %s[%d] truncated with no parseable tool_use block — "
+                    "signalling re-chunk at half size", label, chunk_idx)
+                content_match = re.search(r"=== FILE CONTENT ===\n(.*)",
+                                          user_prompt, re.DOTALL)
+                rechunk_content = content_match.group(1) if content_match else None
+            else:
+                LOGGER.error("⚠️  %s[%d] no tool_use block and no text in response "
+                             "(stop_reason=%s) — chunk yielded nothing",
+                             label, chunk_idx, stop_reason)
+            return all_findings, source_count, rechunk_content
 
         # --- Part C: truncation check ---
         if stop_reason not in ("max_tokens", "length"):
@@ -990,6 +1033,39 @@ def _process_single_chunk(
                 f"gateway rejected the request and this error is not retryable "
                 f"(status={e.status}). Check ANTHROPIC_MODEL / credentials. Original: {e}"
             ) from e
+        # Oversized-chunk rejection (context length / body too large): retrying
+        # identical bytes is pointless — split the chunk smaller and process the
+        # pieces instead (depth-limited so a too-small gateway can't recurse).
+        # _LLMFailure stores its message via super().__init__(msg), so str(e)
+        # is the real error text, not the kind.
+        bodyl = str(e).lower()
+        oversized = e.kind == "gateway_rejection" and (
+            "context length" in bodyl or "context_length" in bodyl
+            or "too large" in bodyl)
+        if oversized and _depth < MAX_RECHUNK_DEPTH:
+            sub_target = max(10_000, _safe_chunk_bytes() // 2)
+            sub_chunks = _smart_chunks(label, text, target=sub_target)
+            LOGGER.warning(
+                "⚠️  %s[%s] rejected as oversized (%s) — re-chunking at %d bytes "
+                "into %d sub-chunk(s) instead of failing the data",
+                label, chunk_idx, e.kind, sub_target, len(sub_chunks))
+            if stats:
+                stats.truncation_events += 1  # count as a size-driven resplit
+            findings, sc = [], 0
+            for j, sub in enumerate(sub_chunks):
+                sub_findings, sub_sc = _process_single_chunk(
+                    sub, label, f"{chunk_idx}.{j}", host, report_dir,
+                    client=client, model=model,
+                    ollama_url=ollama_url, ollama_model=ollama_model,
+                    temperature=temperature, top_p=top_p, stats=stats,
+                    use_cache=use_cache, use_tool_use=use_tool_use,
+                    _depth=_depth + 1,
+                )
+                findings.extend(sub_findings)
+                sc = max(sc, sub_sc)
+                if stats and f"{label}[{chunk_idx}.{j}]" in stats.failed_chunk_ids:
+                    stats.failed_chunk_ids.append(f"{label}[{chunk_idx}]")
+            return findings, sc
         raw_info = ""
         if e.raw:
             p = _write_raw_debug(report_dir, label, chunk_idx, e.raw)
@@ -1174,6 +1250,10 @@ def analyze_files(report_dir: Path, host: str, **llm_kw) -> list[dict]:
                 chunk_text, label, idx, host, report_dir,
                 use_cache=use_cache,
                 use_tool_use=use_tool_use,
+                # stats was popped out of llm_kw above — forward it
+                # explicitly, otherwise every chunk runs with stats=None and
+                # the SUMMARY telemetry reports all zeros (2026-09-09 run).
+                stats=stats,
                 **llm_kw,
             )
             file_findings.extend(findings)
@@ -1358,10 +1438,37 @@ def upload_file_to_slack(channel: str, file_path: Path, title: str,
     return True
 
 
+# Slack section-block hard limit: text over 3000 chars is rejected with
+# invalid_blocks — delivered as HTTP 200 + {"ok": false}, so raise_for_status()
+# can't see it. The 2026-09-14 Threat Brief vanished silently this way: chunks
+# were cut at exactly 3000 and the `_(continued)_` prefix pushed the block to
+# 3014 chars; the ok flag was never checked, so nothing posted and exit=0.
+_SLACK_SECTION_LIMIT = 3000
+_CONT_PREFIX = "_(continued)_\n\n"
+
+
+def _mrkdwn_block_chunks(text: str, limit: int = _SLACK_SECTION_LIMIT) -> list:
+    """Split text into section-block payloads, EACH guaranteed <= limit chars.
+
+    Continuation blocks carry a `_(continued)_` prefix that counts toward the
+    limit, so their budget is shrunk by the prefix length.
+    """
+    pieces = []
+    first = True
+    remaining = text
+    while remaining:
+        budget = limit if first else limit - len(_CONT_PREFIX)
+        take = remaining[:budget]
+        pieces.append(take if first else _CONT_PREFIX + take)
+        remaining = remaining[budget:]
+        first = False
+    return pieces
+
+
 def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> None:
     token = read_secret("slack_bot_token")
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Simple mrkdwn converter
     slack_text = re.sub(r'^## (.+)$', r'\n*\1*\n', markdown, flags=re.MULTILINE)
     slack_text = re.sub(r'^### (.+)$', r'\n_\1_\n', slack_text, flags=re.MULTILINE)
@@ -1372,35 +1479,59 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
     if len(slack_text) > 38000:
         slack_text = slack_text[:38000] + "\n...[truncated — see attached files in thread]"
 
+    def _post(payload: dict) -> dict:
+        resp = requests.post(
+            "https://slack.com/api/chat.postMessage",
+            headers=headers, json=payload, timeout=30,
+        )
+        resp.raise_for_status()   # transport-level only
+        return resp.json()        # API-level errors ride along as ok=False
+
     blocks = [
         {"type": "section", "text": {"type": "mrkdwn", "text": f":shield: *Security scan complete for `{host}`*"}},
         {"type": "divider"},
     ]
-    chunk_size = 3000
-    for i in range(0, len(slack_text), chunk_size):
-        chunk = slack_text[i:i + chunk_size]
-        if i > 0: chunk = f"_(continued)_\n\n{chunk}"
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": chunk}})
+    blocks += [
+        {"type": "section", "text": {"type": "mrkdwn", "text": piece}}
+        for piece in _mrkdwn_block_chunks(slack_text)
+    ]
 
-    msg_resp = requests.post(
-        "https://slack.com/api/chat.postMessage",
-        headers=headers,
-        json={"channel": channel, "text": f":shield: Security scan complete for *{host}*", "blocks": blocks},
-        timeout=30,
-    )
-    msg_resp.raise_for_status()
-    msg_data = msg_resp.json()
-    thread_ts = msg_data.get("ts")
+    data = _post({
+        "channel": channel,
+        "text": f":shield: Security scan complete for *{host}*",
+        "blocks": blocks,
+    })
+    if not data.get("ok"):
+        # Slack rejects the WHOLE message on any invalid block — nothing gets
+        # posted. Last resort: same content as one plain-text message (the
+        # top-level text field has no 3000-char block limit).
+        LOGGER.error("Slack rejected blocks (%s) — retrying as plain text",
+                     data.get("error", "unknown"))
+        data = _post({
+            "channel": channel,
+            "text": f":shield: Security scan complete for {host}\n\n{slack_text}",
+        })
+        if not data.get("ok"):
+            LOGGER.error("Slack rejected plain-text fallback too (%s)",
+                         data.get("error", "unknown"))
+            _write_raw_debug(report_dir, "slack_rejected", 0, slack_text)
+            raise RuntimeError(
+                f"could not post Threat Brief to Slack: {data.get('error', 'unknown')}")
+
+    thread_ts = data.get("ts")
+    LOGGER.info("Threat Brief posted to %s (ts=%s, blocks=%d)",
+                channel, thread_ts, len(blocks))
 
     if thread_ts:
         updates_text = get_tool_updates(report_dir)
-        requests.post(
-            "https://slack.com/api/chat.postMessage",
-            headers=headers,
-            json={"channel": channel, "thread_ts": thread_ts, 
-                  "text": f":paperclip: Raw scan reports are attached in this thread for reviewer reference.{updates_text}"},
-            timeout=30,
-        )
+        upd = _post({
+            "channel": channel,
+            "thread_ts": thread_ts,
+            "text": f":paperclip: Raw scan reports are attached in this thread for reviewer reference.{updates_text}",
+        })
+        if not upd.get("ok"):
+            LOGGER.warning("thread attachment notice rejected: %s",
+                           upd.get("error", "unknown"))
 
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
     for raw_file in [
@@ -1432,6 +1563,7 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
             upload_file_to_slack(channel, chunk, title, host, thread_ts=thread_ts)
             if len(chunks) > 1:
                 chunk.unlink(missing_ok=True)
+
 
 
 def copy_reports_to_local(report_dir: Path, host: str) -> None:
@@ -1563,7 +1695,23 @@ def main():
         plan_path.write_text(threat_brief)
         LOGGER.info("brief written to %s", plan_path)
         LOGGER.info("posting Threat Brief to Slack channel %s", channel)
-        post_to_slack(channel, threat_brief, report_dir, args.host)
+        try:
+            post_to_slack(channel, threat_brief, report_dir, args.host)
+        except Exception as e:
+            # Brief never made it to Slack (blocks rejected and plain-text retry
+            # failed, or transport error). Post raw artefacts with an honest note
+            # and exit non-zero so run_scan.sh reports failure, not false success.
+            LOGGER.error("could not post Threat Brief to Slack: %s", e)
+            try:
+                post_fallback_to_slack(
+                    channel,
+                    "Threat Brief generated but could not be posted to Slack. "
+                    "Raw scan reports attached — see remediation_plan.md in the report dir.",
+                    report_dir, args.host)
+            except Exception as fb_exc:
+                LOGGER.error("could not post fallback to Slack either: %s", fb_exc)
+            LOGGER.info("SUMMARY %s", json.dumps(stats.summary(), sort_keys=True))
+            sys.exit(1)
 
     # Part E.3: single summary line
     LOGGER.info("SUMMARY %s", json.dumps(stats.summary(), sort_keys=True))
