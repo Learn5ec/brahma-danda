@@ -2,7 +2,10 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased — 2026-11-12 (branch-3)
+## [1.1.0] — 2026-11-12 (branch-3)
+
+Version bumped from `1.0.0` to `1.1.0` (image tag in `docker-compose.yml`, echoed in
+`setup.sh`) — minor bump: new host-UFW reporting feature plus the model-404 fix.
 
 ### Fixed — scan failing at the remediation step (LLM 404)
 - Root cause of the failed `2026-11-12T060452Z` scan: the running container had a

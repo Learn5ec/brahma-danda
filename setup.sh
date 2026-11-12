@@ -403,7 +403,7 @@ echo "  ✓ Slack channel configured."
 echo ""
 echo "[5/8] Building Docker image..."
 docker compose build --no-cache brahmadanda
-echo "  ✓ Image built: brahma-danda:1.0.0"
+echo "  ✓ Image built: brahma-danda:1.1.0"
 
 # ── 6. Create volumes and start init container ──
 echo ""

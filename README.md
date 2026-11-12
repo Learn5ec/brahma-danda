@@ -111,7 +111,7 @@ The name is inspired by the **Brahmadanda**, a defensive divine staff from Hindu
 | **nginx checks** | Security headers, TLS configuration, server disclosure and rate-limit controls |
 | **Docker checks** | Container/runtime configuration checks |
 | **ss** | Listening socket and local service visibility |
-| **UFW / iptables / nftables** | Firewall and packet-filter state collection |
+| **UFW / iptables / nftables** | Firewall and packet-filter state, plus the **host's** UFW ruleset rendered as a native `ufw status` To/Action/From table (see `ufw_rules.txt`) |
 | **LLM layer** | Finding analysis, correlation, prioritization and remediation guidance |
 | **Slack** | Threat Brief delivery and raw report attachment |
 
@@ -153,6 +153,15 @@ ANTHROPIC_MODEL=your-model
 ```
 
 If a custom gateway is not configured, the project can use the mounted Claude API key secret.
+
+> **Model name must be one the gateway actually serves.** `ANTHROPIC_MODEL` is sent
+> verbatim to the endpoint; a model the gateway doesn't provision returns
+> `404 "… not configured globally"`, which `remediate.py` treats as **fatal (non-retryable)**
+> — so the scan's collection succeeds but no Threat Brief is produced. Check your
+> gateway's list (`GET <base>/v1/models`) and confirm the exact id works with a real
+> `/v1/messages` call before deploying. The env value must also be picked up by a
+> **container recreation** (`docker compose up -d`) — editing `.env` alone does not
+> change a container that is already running.
 
 ### Backend selection
 
@@ -461,11 +470,23 @@ nginx_checks.json
 docker_checks.json
 ss_listeners.txt
 ufw_status.txt
+ufw_rules.txt
 iptables.txt
 nftables.txt
 lynis-report.dat
 testssl_<port>.json
 ```
+
+> **`ufw_rules.txt` — host UFW configuration.** `ufw_status.txt` is produced by
+> running `ufw status` inside the scanner container, so it reflects the *container's*
+> own UFW (always "inactive" here) and lists no per-port rules. `ufw_rules.txt`
+> instead reconstructs the **host's** real firewall from the read-only `/host` mount
+> and renders it as the native `ufw status` **To / Action / From** table — including
+> each rule's source IP and inline `# comment`, IPv4 and IPv6 rules, the enabled
+> state and default INPUT/OUTPUT policies, and a reconciliation line that checks the
+> live iptables/nftables ruleset to say whether those rules are actually enforced.
+> (It parses the files rather than `chroot`-ing into the host, because the container
+> drops `CAP_SYS_CHROOT`.) See `scripts/checks/ufw_rules_report.py`.
 
 Raw reports are retained for reviewer reference and can also be attached to the corresponding Slack thread.
 
@@ -706,6 +727,20 @@ curl http://host.docker.internal:11434/api/tags
 ```
 
 For an Anthropic-compatible gateway, verify that the configured endpoint is reachable from the container.
+
+**`404 "… not configured globally"` in `remediate.log`:** the `ANTHROPIC_MODEL`
+value is not a model the gateway serves. `remediate.py` aborts (fatal, non-retryable)
+on this, so collection completes but no Threat Brief is posted. List the gateway's
+models (`GET <base>/v1/models`), pick a valid id, set it in `.env`, and **recreate the
+container** (`docker compose up -d`) — a running container keeps its old env. Verify
+with a real completion before scheduling:
+
+```bash
+curl -s $ANTHROPIC_BASE_URL/v1/messages \
+  -H "authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+  -H "anthropic-version: 2023-06-01" -H "content-type: application/json" \
+  -d '{"model":"<your-model>","max_tokens":8,"messages":[{"role":"user","content":"hi"}]}'
+```
 
 ---
 

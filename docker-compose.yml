@@ -12,7 +12,7 @@ services:
 
   brahmadanda:
     build: .
-    image: brahma-danda:1.0.0        # pinned tag — never ':latest' in prod
+    image: brahma-danda:1.1.0        # pinned tag — never ':latest' in prod
     container_name: brahma-danda
     user: "0"                         # run as root so iptables/nft/ufw work;
                                       # host filesystem stays read-only (/:/host:ro)
