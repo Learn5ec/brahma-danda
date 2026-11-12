@@ -61,6 +61,10 @@ services:
     environment:
       # Non-secret config only. Actual credentials come from `secrets:` below.
       - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID:?set SLACK_CHANNEL_ID in .env}
+      # Pin the container clock so cron day-of-month/month times fire at the
+      # same real-world wall-clock on every server (supercronic uses local time;
+      # default was UTC). Override per-host in .env if you need a different zone.
+      - TZ=${TZ:-Asia/Kolkata}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-}
       - SCAN_SCHEDULE_CRON=${SCAN_SCHEDULE_CRON:-0 3 1 * *}   # default: 03:00 on the 1st of every month

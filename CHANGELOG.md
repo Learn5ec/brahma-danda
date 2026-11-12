@@ -2,54 +2,69 @@
 
 All notable changes to this project are documented here.
 
-## [1.1.0] — 2026-11-12 (branch-3)
+## [1.1.0] — 2026-11-12
 
-Version bumped from `1.0.0` to `1.1.0` (image tag in `docker-compose.yml`, echoed in
-`setup.sh`) — minor bump: new host-UFW reporting feature plus the model-404 fix.
+Image tag bumped `1.0.0 → 1.1.0`. Minor release: the scanner now reports the
+**host's real firewall configuration**, the silent remediation failure is fixed,
+and scheduled runs are made deterministic across servers.
 
-### Fixed — scan failing at the remediation step (LLM 404)
-- Root cause of the failed `2026-11-12T060452Z` scan: the running container had a
-  **stale `ANTHROPIC_MODEL=haiku`** baked in. The AI gateway serves `coder`
-  (HTTP 200) but returns `404 "haiku not configured globally"` for `haiku` (and
-  for `claude-sonnet-5`), and `remediate.py` treats a 404 as a non-retryable
-  fatal error → the Threat Brief / Slack post never ran even though every
-  collection tool succeeded.
-- `.env` already specified `ANTHROPIC_MODEL=coder`; the fix was to **rebuild the
-  image and recreate the container** so it re-reads `.env`. Verified: the
-  Anthropic SDK forced-tool-use call now succeeds and full scans post to Slack.
-- Note: the in-code fallback model `"claude-sonnet-5"` (`_make_anthropic_client`)
-  is also not served by this gateway, but it only applies when both
-  `ANTHROPIC_MODEL` and `CLAUDE_MODEL` are empty, and it is correct for the
-  real Anthropic-cloud path — left unchanged.
+### ✨ Highlights
+- **Host UFW configuration is now visible**, rendered as the native
+  `ufw status` **To / Action / From** table (per-port rules, source IPs, and
+  inline `#` comments) — previously invisible.
+- **Scan no longer dies silently** before posting to Slack due to a wrong
+  model id (HTTP 404).
+- **Boot self-check** prints schedule / clock-TZ / model / secrets / lock /
+  supercronic to `docker logs`, so per-server differences are obvious at a glance.
+- **Timezone is pinned** to `Asia/Kolkata` (configurable) so cron fires at the
+  same real-world time on every server.
 
-### Added — host UFW configuration reported as a native `ufw status` table
-Previously the firewall artefact (`ufw_status.txt`) came from running
-`ufw status verbose` **inside the container**, which reads the container's own
-`/etc/ufw` (not the host's) and prints **no per-port rules when UFW is
-inactive** — so the host's real, per-port firewall configuration (which ports it
-allows, from which source IPs) was invisible.
+### Added
+- **`scripts/checks/ufw_rules_report.py`** — reconstructs the host's UFW ruleset
+  from the read-only `/host` mount and renders it as the native `ufw status`
+  To/Action/From table: per-port allow/deny rules with source IP and inline
+  comment, enabled state, default INPUT/OUTPUT policies, IPv4 **and** IPv6, plus
+  a **reconciliation** line that checks the live iptables/nftables ruleset to
+  report whether the rules are actually enforced. Parses files rather than
+  `chroot`-ing into the host (the container drops `CAP_SYS_CHROOT`).
+- **`ufw_rules.txt`** scan artefact — generated in `run_scan.sh` §3.2b via that
+  parser (raw-grep fallback if `python3` is unavailable); registered in
+  `remediate.py` analysis inputs and Slack-attachment lists.
+- **Boot self-check** in `scripts/entrypoint.sh` — logs the rendered schedule,
+  `SCAN_SCHEDULE_CRON`, container clock/TZ, LLM backend+model (warns if unset),
+  and runnable state (secrets, reports-volume writable, scan lock, supercronic
+  present). All lines guarded — never blocks startup.
 
-- **New `scripts/checks/ufw_rules_report.py`** — stdlib-only parser that
-  reconstructs the host's UFW ruleset from the read-only `/host` mount and
-  renders it in the native `ufw status` **To / Action / From** table, including
-  each rule's source IP and inline `# comment`, plus the enabled state, default
-  INPUT/OUTPUT policies, IPv4 **and** IPv6 rules, and a **reconciliation** line
-  that checks the live iptables/nftables ruleset to report whether the rules are
-  actually enforced. It parses files rather than `chroot`-ing into the host
-  because the container drops `CAP_SYS_CHROOT`.
-- **`scripts/run_scan.sh`** (§3.2b) now generates a new
-  `${REPORT_DIR}/ufw_rules.txt` artefact via that parser, with a raw-grep
-  fallback if `python3` is ever unavailable.
-- **`scripts/remediate.py`** — `ufw_rules.txt` registered in the analysis-input
-  list and both Slack-attachment lists, so it is analysed by the model and
-  attached to the report.
-- **`scripts/prompts.py`** — corrected the misleading guidance ("inactive" in
-  `ufw_status.txt` reflects the scanner image, NOT the host) and added
-  instructions to report/reconcile `ufw_rules.txt`, treating `From: Anywhere`
-  allow rules as world-exposed while not over-flagging rules scoped to a
-  specific source IP.
+### Fixed
+- **Scan failing at the remediation step (LLM 404).** A running container with a
+  stale `ANTHROPIC_MODEL=haiku` made every scan collect data successfully and
+  then abort at the first LLM call with `404 "haiku not configured globally"`
+  (a non-retryable/fatal class), so **no Threat Brief reached Slack**. The AI
+  gateway serves `coder` (HTTP 200); `haiku` / `claude-sonnet-5` return 404.
+  Resolution: correct the value in `.env` and **recreate the container** so it
+  re-reads the environment. See *Upgrade notes*.
+- **Misleading firewall guidance.** `ufw_status.txt` is the *container's* own
+  `ufw status` (always "inactive" here) and was being read as if it were the
+  host's. Prompt guidance now says so and points to `ufw_rules.txt`.
+
+### Changed
+- **Timezone pinned for cron determinism.** `TZ=Asia/Kolkata` is now set in the
+  container (default in `docker-compose.yml`, documented in `.env.example`) and
+  `tzdata` is installed in the image. Cron day-of-month times were previously
+  interpreted as UTC; they now fire at Kolkata local time on every server.
+  Override per-host via `TZ=` in `.env` if a different zone is required.
 
 ### Verified
 - Full scan `2026-11-12T071602Z` completed end-to-end (Threat Brief posted to
-  Slack, 0 failed chunks). Targeted UFW-only analysis + Slack post also
-  succeeded (findings sourced from `ufw_rules.txt`).
+  Slack, 0 failed chunks); a targeted UFW-only analysis + Slack post also
+  succeeded, with findings sourced from `ufw_rules.txt`.
+
+### ⬆️ Upgrade notes (read before deploying)
+1. **`ANTHROPIC_MODEL` must be a model your gateway actually serves.** A wrong
+   id is fatal and produces *no report* while the scan still "runs". Verify with
+   `GET <base>/v1/models` and a real `/v1/messages` call.
+2. **The model / schedule / TZ values only take effect when the container is
+   recreated** (`docker compose up -d --build`). Editing `.env` alone does not
+   change an already-running container — this exact staleness caused the outage.
+3. After deploy, run the boot self-check with `docker logs brahma-danda` and
+   confirm model, TZ, secrets, and lock are healthy on each server.

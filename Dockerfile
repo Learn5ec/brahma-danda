@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         bsdmainutils \
         dnsutils \
         sudo \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install testssl.sh ──
