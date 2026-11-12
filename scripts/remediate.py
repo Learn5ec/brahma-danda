@@ -1133,7 +1133,7 @@ def _file_inputs(report_dir: Path) -> list[tuple[str, str]]:
     inputs = []
     for fname in [
         "trivy.json", "debsecan.txt", "combined_meta.json",
-        "ss_listeners.txt", "ufw_status.txt", "iptables.txt",
+        "ss_listeners.txt", "ufw_status.txt", "ufw_rules.txt", "iptables.txt",
         "nftables.txt", "lynis-report.dat",
     ]:
         fpath = report_dir / fname
@@ -1536,7 +1536,7 @@ def post_to_slack(channel: str, markdown: str, report_dir: Path, host: str) -> N
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
     for raw_file in [
         "trivy.json", "debsecan.txt", "combined_meta.json", "nmap.xml", "nmap.txt",
-        "ss_listeners.txt", "ufw_status.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
+        "ss_listeners.txt", "ufw_status.txt", "ufw_rules.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
         "run_scan.log", "remediate.log", ".scan_manifest.json",
     ]:
         fpath = report_dir / raw_file
@@ -1599,7 +1599,7 @@ def post_fallback_to_slack(channel: str, fallback_msg: str, report_dir: Path, ho
     MAX_CHUNK_SIZE = 50 * 1024 * 1024
     for raw_file in [
         "trivy.json", "debsecan.txt", "combined_meta.json", "nmap.xml", "nmap.txt",
-        "ss_listeners.txt", "ufw_status.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
+        "ss_listeners.txt", "ufw_status.txt", "ufw_rules.txt", "iptables.txt", "nftables.txt", "lynis-report.dat",
         "run_scan.log", "remediate.log", ".scan_manifest.json",
     ]:
         fpath = report_dir / raw_file

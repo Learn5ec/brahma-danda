@@ -194,6 +194,40 @@ ${SUDO} ufw status verbose > "${REPORT_DIR}/ufw_status.txt" 2>/dev/null || echo 
 ${SUDO} iptables-save > "${REPORT_DIR}/iptables.txt" 2>/dev/null || echo "iptables-save failed" > "${REPORT_DIR}/iptables.txt"
 ${SUDO} nft list ruleset > "${REPORT_DIR}/nftables.txt" 2>/dev/null || echo "nft failed" > "${REPORT_DIR}/nftables.txt"
 
+# ── 3.2b HOST UFW *configuration* (read from the read-only host mount) ──────
+# `ufw status verbose` above reports the CONTAINER's own UFW: the image ships its
+# own /etc/ufw, and an INACTIVE UFW prints NO per-port rules at all — so that
+# probe can never reveal the HOST's intended firewall config ("Status: inactive"
+# tells us nothing about which ports UFW is configured to allow/deny). Read the
+# host's UFW config files directly from the read-only /host mount to capture the
+# real ENABLED state, the default policies, and the FULL per-port ruleset even
+# while UFW is inactive. Strictly read-only. We parse the files rather than run
+# the host's `ufw` because the container drops CAP_SYS_CHROOT, so `chroot /host
+# ufw …` is not possible — file parsing is the correct minimal-privilege path.
+HOST_ROOT="${HOST_ROOT:-/host}"
+# Render the host ruleset as the native `ufw status` To/Action/From table (with
+# the source IP and the inline `# comment` ufw stores in each rule) using the
+# parser in scripts/checks/. Fall back to a raw grep of the rule files if
+# python3 is ever unavailable, so the artefact is always produced.
+UFW_REPORT_PY="/app/scripts/checks/ufw_rules_report.py"
+if command -v python3 >/dev/null 2>&1 && [ -r "$UFW_REPORT_PY" ]; then
+  python3 "$UFW_REPORT_PY" "$HOST_ROOT" \
+      "${REPORT_DIR}/iptables.txt" "${REPORT_DIR}/nftables.txt" \
+      > "${REPORT_DIR}/ufw_rules.txt" 2>"${REPORT_DIR}/ufw_rules.stderr.log" \
+    || { echo "ufw_rules_report.py failed — see ufw_rules.stderr.log" > "${REPORT_DIR}/ufw_rules.txt"; \
+         echo "[run_scan] ⚠️ ufw_rules_report.py failed"; }
+else
+  {
+    echo "# HOST UFW CONFIGURATION — raw rules (python3 unavailable; table renderer skipped)"
+    echo "ENABLED: $(grep -E '^[[:space:]]*ENABLED=' "${HOST_ROOT}/etc/ufw/ufw.conf" 2>/dev/null || echo 'unknown')"
+    for f in user.rules user6.rules; do
+      echo "## ${HOST_ROOT}/etc/ufw/${f}"
+      grep -E '^### tuple ###|^-A ufw-user-input|^-A ufw6-user-input' \
+        "${HOST_ROOT}/etc/ufw/${f}" 2>/dev/null || echo "(none)"
+    done
+  } > "${REPORT_DIR}/ufw_rules.txt" 2>/dev/null
+fi
+
 # ── 4. nmap — self-scan of THIS host's real listening ports (needs network_mode: host,
 #    see docker-compose.yml for the documented trade-off). Safe script categories by
 #    default; dos/exploit/brute/fuzzer only if NMAP_ALLOW_INTRUSIVE=true. ──

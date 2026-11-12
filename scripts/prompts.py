@@ -142,7 +142,8 @@ File-specific guidance (BE EXHAUSTIVE — extract EVERY finding at Critical/High
 - trivy.json: extract ALL CVEs at CRITICAL/HIGH severity. This file may be large — extract every CVE found.
 - debsecan.txt: extract Debian tracker CVEs at CRITICAL/HIGH severity.
 - ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or *: (reachable from any network unless a firewall says otherwise — and THIS file alone cannot prove firewall protection, so never suppress a bind for lack of it). Loopback-only binds (127.0.0.1/::1) are NOT findings.
-- ufw_status.txt: flag if UFW is inactive, missing, or has no default deny policy.
+- ufw_status.txt: the CONTAINER's own live `ufw status` — an "inactive" here reflects the scanner image, NOT the host; never conclude the host has no firewall from this file alone. Read ufw_rules.txt for the host's real config.
+- ufw_rules.txt: the HOST's real UFW configuration rendered as a `ufw status` To/Action/From table (parsed from the read-only host mount — enabled state, default policies, and every allow/deny rule with its source IP and inline # comment). Flag as Critical: UFW ENABLED=no, or the reconciliation line saying the rules are NOT enforced/ABSENT (UFW configured but not loaded = host effectively unfiltered); default INPUT policy that is not DROP; and EVERY allow rule whose From is "Anywhere" (world), especially ports also open in ss_listeners.txt/nmap. Weigh the From column: a rule scoped to a specific source IP (e.g. an office/Jenkins IP, or one whose comment names a named admin panel) is far less exposed than "Anywhere" — do not report source-restricted rules as world-exposed, but DO flag an admin/dev tool (Jenkins, n8n, dashboards) left on "Anywhere".
 - iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies (INPUT ACCEPT with no rules = no filtering — flag it).
 - nftables.txt: flag missing default deny policies, open ports without rules, or permissive policies.
 - lynis-report.dat: extract ALL items marked [WARNING], [TIP], or [FAILED]. Do not skip any.
@@ -175,7 +176,8 @@ File-specific guidance (BE EXHAUSTIVE — extract EVERY finding at Critical/High
 - trivy.json: extract ALL CVEs at CRITICAL/HIGH severity. This file is large — extract every CVE found.
 - debsecan.txt: extract Debian tracker CVEs at CRITICAL/HIGH severity.
 - ss_listeners.txt: flag EVERY service bound to 0.0.0.0, [::], or *: (reachable from any network unless a firewall says otherwise — and THIS file alone cannot prove firewall protection, so never suppress a bind for lack of it). Loopback-only binds (127.0.0.1/::1) are NOT findings.
-- ufw_status.txt: flag if UFW is inactive, missing, or has no default deny policy.
+- ufw_status.txt: the CONTAINER's own live `ufw status` — an "inactive" here reflects the scanner image, NOT the host; never conclude the host has no firewall from this file alone. Read ufw_rules.txt for the host's real config.
+- ufw_rules.txt: the HOST's real UFW configuration rendered as a `ufw status` To/Action/From table (parsed from the read-only host mount — enabled state, default policies, and every allow/deny rule with its source IP and inline # comment). Flag as Critical: UFW ENABLED=no, or the reconciliation line saying the rules are NOT enforced/ABSENT (UFW configured but not loaded = host effectively unfiltered); default INPUT policy that is not DROP; and EVERY allow rule whose From is "Anywhere" (world), especially ports also open in ss_listeners.txt/nmap. Weigh the From column: a rule scoped to a specific source IP (e.g. an office/Jenkins IP, or one whose comment names a named admin panel) is far less exposed than "Anywhere" — do not report source-restricted rules as world-exposed, but DO flag an admin/dev tool (Jenkins, n8n, dashboards) left on "Anywhere".
 - iptables.txt: flag missing INPUT/OUTPUT default deny rules, open ports without rules, or permissive policies (INPUT ACCEPT with no rules = no filtering — flag it).
 - nftables.txt: flag missing default deny policies, open ports without rules, or permissive policies.
 - lynis-report.dat: extract ALL items marked [WARNING], [TIP], or [FAILED]. Do not skip any.
@@ -252,10 +254,10 @@ You will receive multiple scan tool outputs:
 - nmap self-scan (open ports + script results)
 - ss -tlnp and firewall data (determines internet-reachability)
 - Lynis hardening report
-- nftables/iptables/UFW firewall state
+- nftables/iptables/UFW firewall state — including ufw_rules.txt, the HOST's real UFW config (enabled state, default INPUT policy, and the full per-port allow ruleset) parsed from the host mount, plus a reconciliation line stating whether those rules are actually loaded/enforced.
 
 Exposure classification (MANDATORY for every finding):
-- Internet-reachable: bound to 0.0.0.0, [::], or a public IP, and not blocked by firewall.
+- Internet-reachable: bound to 0.0.0.0, [::], or a public IP, and not blocked by firewall. Determine firewall protection from the LIVE ruleset (iptables.txt/nftables.txt) and ufw_rules.txt's reconciliation line — NOT from ufw_status.txt (that is the container's own status). If UFW is ENABLED=no or its rules are reported not enforced, treat hosts as effectively unfiltered and mark such binds Internet-reachable.
 - Local-only: bound to 127.0.0.1 or ::1 — lowers risk significantly.
 
 Produce a Slack-native Threat Brief with this EXACT structure \
